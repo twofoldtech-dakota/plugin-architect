@@ -71,9 +71,17 @@ export function createServer(): McpServer {
 
 async function main() {
   await initHiveDir();
-  const server = createServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+
+  const mode = process.argv.includes("--http") ? "http" : "stdio";
+
+  if (mode === "http") {
+    const { startHttpServer } = await import("./transport-http.js");
+    await startHttpServer(createServer);
+  } else {
+    const server = createServer();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
 }
 
 main().catch((e) => {

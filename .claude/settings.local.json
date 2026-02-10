@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__hive__hive_list_projects",
+      "Bash(wc:*)",
+      "Bash(for f in D:githubhivesrcservertools*.ts)",
+      "Bash(do grep -o '\"\"hive_[^\"\"]*\"\"' \"$f\")",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(npm run build:ui:*)"
+    ]
+  }
+}
