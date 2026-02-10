@@ -1,15 +1,19 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
 import type { Idea, Evaluation } from "../types/idea.js";
 
 export function registerEvaluateIdea(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_evaluate_idea",
-    "Run a structured evaluation against a captured idea to decide if it's worth building",
     {
-      idea: z.string().describe("Idea slug"),
+      description: "Run a structured evaluation against a captured idea to decide if it's worth building",
+      _meta: { ui: { resourceUri: "ui://hive/idea-scorecard" } },
+      inputSchema: {
+        idea: z.string().describe("Idea slug"),
       feasibility: z.object({
         score: z.number().min(1).max(5).describe("Feasibility score 1-5"),
         has_patterns: z.boolean().describe("Do existing patterns apply?"),
@@ -29,7 +33,8 @@ export function registerEvaluateIdea(server: McpServer): void {
         full_vision: z.string().describe("Where this could go"),
       }),
       verdict: z.enum(["build", "park", "kill", "needs_more_thinking"]).describe("Overall verdict"),
-      reasoning: z.string().describe("Explanation of the verdict"),
+        reasoning: z.string().describe("Explanation of the verdict"),
+      },
     },
     async ({ idea: slug, feasibility, competitive, scope, verdict, reasoning }) => {
       const filePath = join(HIVE_DIRS.ideas, `${slug}.yaml`);

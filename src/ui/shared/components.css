@@ -1,0 +1,536 @@
+/*
+ * Hive — additional component styles for React views
+ *
+ * Extends styles.css with components not covered by the base theme.
+ */
+
+/* ── Score Dots ───────────────────────────────────────────── */
+
+.hive-score-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hive-score-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--hive-bg-muted);
+  transition: background 0.15s;
+}
+
+.hive-score-dot.filled {
+  background: var(--hive-accent);
+}
+
+.hive-score-dot.filled.success {
+  background: var(--hive-success);
+}
+
+.hive-score-dot.filled.warning {
+  background: var(--hive-warning);
+}
+
+.hive-score-dot.filled.error {
+  background: var(--hive-error);
+}
+
+/* ── Progress Ring ────────────────────────────────────────── */
+
+.hive-progress-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hive-progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.hive-progress-ring-track {
+  fill: none;
+  stroke: var(--hive-bg-muted);
+}
+
+.hive-progress-ring-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.hive-progress-ring-label {
+  position: absolute;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ── Tab Bar ──────────────────────────────────────────────── */
+
+.hive-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--hive-border);
+  margin-bottom: var(--hive-space-md);
+  overflow-x: auto;
+}
+
+.hive-tab {
+  padding: var(--hive-space-sm) var(--hive-space-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--hive-fg-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.hive-tab:hover {
+  color: var(--hive-fg);
+}
+
+.hive-tab.active {
+  color: var(--hive-accent);
+  border-bottom-color: var(--hive-accent);
+}
+
+.hive-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: var(--hive-bg-muted);
+  color: var(--hive-fg-muted);
+}
+
+.hive-tab.active .hive-tab-count {
+  background: var(--hive-info-bg);
+  color: var(--hive-accent);
+}
+
+/* ── Expandable ───────────────────────────────────────────── */
+
+.hive-expandable {
+  border: 1px solid var(--hive-border-muted);
+  border-radius: var(--hive-radius-md);
+  overflow: hidden;
+}
+
+.hive-expandable-header {
+  display: flex;
+  align-items: center;
+  gap: var(--hive-space-sm);
+  padding: var(--hive-space-sm) var(--hive-space-md);
+  background: var(--hive-bg-subtle);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  user-select: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--hive-fg);
+  font-family: inherit;
+}
+
+.hive-expandable-header:hover {
+  background: var(--hive-bg-muted);
+}
+
+.hive-expandable-chevron {
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.hive-expandable-chevron.open {
+  transform: rotate(90deg);
+}
+
+.hive-expandable-body {
+  padding: var(--hive-space-md);
+}
+
+/* ── Code Block ───────────────────────────────────────────── */
+
+.hive-code-block {
+  position: relative;
+  background: var(--hive-bg-subtle);
+  border: 1px solid var(--hive-border-muted);
+  border-radius: var(--hive-radius-md);
+  overflow: hidden;
+}
+
+.hive-code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hive-space-xs) var(--hive-space-md);
+  border-bottom: 1px solid var(--hive-border-muted);
+  font-size: 11px;
+  color: var(--hive-fg-muted);
+}
+
+.hive-code-block pre {
+  margin: 0;
+  padding: var(--hive-space-md);
+  overflow-x: auto;
+  font-family: var(--hive-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--hive-fg);
+}
+
+.hive-code-block-copy {
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  background: var(--hive-bg-muted);
+  border: none;
+  border-radius: var(--hive-radius-sm);
+  color: var(--hive-fg-muted);
+  font-family: inherit;
+}
+
+.hive-code-block-copy:hover {
+  color: var(--hive-fg);
+}
+
+/* ── File Tree ────────────────────────────────────────────── */
+
+.hive-file-tree {
+  font-family: var(--hive-font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.hive-file-tree-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hive-space-xs);
+  padding-left: calc(var(--depth, 0) * 16px);
+  color: var(--hive-fg);
+}
+
+.hive-file-tree-icon {
+  width: 14px;
+  text-align: center;
+  color: var(--hive-fg-muted);
+  flex-shrink: 0;
+}
+
+/* ── Modal ────────────────────────────────────────────────── */
+
+.hive-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.hive-modal {
+  background: var(--hive-bg);
+  border: 1px solid var(--hive-border);
+  border-radius: var(--hive-radius-lg);
+  box-shadow: var(--hive-shadow-md);
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--hive-space-xl);
+  min-width: 320px;
+}
+
+.hive-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--hive-space-lg);
+}
+
+.hive-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hive-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--hive-fg-muted);
+  padding: 4px;
+  line-height: 1;
+}
+
+.hive-modal-close:hover {
+  color: var(--hive-fg);
+}
+
+/* ── Loading / Empty / Error States ───────────────────────── */
+
+.hive-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hive-space-md);
+  padding: var(--hive-space-xl);
+  color: var(--hive-fg-muted);
+  font-size: 13px;
+}
+
+.hive-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--hive-border);
+  border-top-color: var(--hive-accent);
+  border-radius: 50%;
+  animation: hive-spin 0.6s linear infinite;
+}
+
+@keyframes hive-spin {
+  to { transform: rotate(360deg); }
+}
+
+.hive-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hive-space-sm);
+  padding: var(--hive-space-xl);
+  color: var(--hive-fg-muted);
+  text-align: center;
+}
+
+.hive-empty-state-icon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.hive-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hive-space-sm);
+  padding: var(--hive-space-lg);
+  background: var(--hive-error-bg);
+  border: 1px solid var(--hive-error);
+  border-radius: var(--hive-radius-md);
+  color: var(--hive-error);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ── Stat Card ────────────────────────────────────────────── */
+
+.hive-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hive-space-xs);
+  padding: var(--hive-space-md);
+  background: var(--hive-bg-subtle);
+  border: 1px solid var(--hive-border-muted);
+  border-radius: var(--hive-radius-md);
+  text-align: center;
+}
+
+.hive-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hive-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--hive-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Horizontal Bar ───────────────────────────────────────── */
+
+.hive-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--hive-space-sm);
+}
+
+.hive-bar-label {
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hive-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--hive-bg-muted);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hive-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* ── Kanban ────────────────────────────────────────────────── */
+
+.hive-kanban {
+  display: flex;
+  gap: var(--hive-space-md);
+  overflow-x: auto;
+  padding-bottom: var(--hive-space-sm);
+}
+
+.hive-kanban-column {
+  min-width: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hive-space-sm);
+}
+
+.hive-kanban-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hive-space-sm) var(--hive-space-md);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--hive-fg-muted);
+  border-bottom: 2px solid var(--hive-border);
+}
+
+.hive-kanban-card {
+  padding: var(--hive-space-md);
+  background: var(--hive-bg);
+  border: 1px solid var(--hive-border-muted);
+  border-radius: var(--hive-radius-md);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.hive-kanban-card:hover {
+  border-color: var(--hive-accent);
+  box-shadow: var(--hive-shadow-sm);
+}
+
+.hive-kanban-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: var(--hive-space-xs);
+}
+
+.hive-kanban-card-desc {
+  font-size: 11px;
+  color: var(--hive-fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Quadrant Chart ───────────────────────────────────────── */
+
+.hive-quadrant {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--hive-border);
+  border-radius: var(--hive-radius-md);
+  overflow: hidden;
+}
+
+.hive-quadrant-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--hive-fg-subtle);
+  border: 0.5px solid var(--hive-border-muted);
+}
+
+.hive-quadrant-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--hive-accent);
+  border: 2px solid var(--hive-bg);
+  box-shadow: var(--hive-shadow-sm);
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.hive-quadrant-axis-x,
+.hive-quadrant-axis-y {
+  position: absolute;
+  font-size: 9px;
+  color: var(--hive-fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hive-quadrant-axis-x {
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hive-quadrant-axis-y {
+  left: -28px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* ── Search Bar ───────────────────────────────────────────── */
+
+.hive-search-bar {
+  display: flex;
+  gap: var(--hive-space-sm);
+  margin-bottom: var(--hive-space-md);
+}
+
+.hive-search-bar .hive-input {
+  flex: 1;
+}
+
+/* ── Tech Pills ───────────────────────────────────────────── */
+
+.hive-tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hive-space-xs);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--hive-radius-sm);
+  background: var(--hive-info-bg);
+  color: var(--hive-info);
+}

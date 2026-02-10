@@ -1,4 +1,5 @@
 import { build, type InlineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import fs from "node:fs";
 import path from "node:path";
@@ -34,7 +35,7 @@ async function bundleViews() {
 
     const config: InlineConfig = {
       root: viewDir,
-      plugins: [viteSingleFile()],
+      plugins: [react(), viteSingleFile()],
       build: {
         outDir,
         emptyOutDir: true,

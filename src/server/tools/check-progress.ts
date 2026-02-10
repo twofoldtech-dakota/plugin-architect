@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { access, readdir, stat } from "node:fs/promises";
@@ -82,12 +83,16 @@ function classifyComponent(expected: number, found: number): ComponentStatus {
 }
 
 export function registerCheckProgress(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_check_progress",
-    "Check build progress by comparing the project's architecture spec against the actual codebase on disk.",
     {
-      project: z.string().describe("Project slug"),
-      project_path: z.string().describe("Absolute path to the actual project codebase on disk"),
+      description: "Check build progress by comparing the project's architecture spec against the actual codebase on disk.",
+      _meta: { ui: { resourceUri: "ui://hive/progress-dashboard" } },
+      inputSchema: {
+        project: z.string().describe("Project slug"),
+        project_path: z.string().describe("Absolute path to the actual project codebase on disk"),
+      },
     },
     async ({ project, project_path }) => {
       let architecture: Architecture;

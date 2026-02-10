@@ -34,34 +34,10 @@ Starts as a knowledge layer that supercharges Claude Code (or any MCP client). G
 │   │       └── surface.yaml     # API surface (types, methods, signatures)
 │   └── stacks/
 │       └── {stack-slug}.yaml    # Full stack presets (e.g., "next-drizzle-sqlite")
-├── fleet/
-│   ├── topology.yaml            # Infrastructure topology (hosts, domains)
-│   ├── costs.yaml               # Resource cost registry
-│   └── priorities.yaml          # Fleet-level priority scores
-├── retrospectives/
-│   └── {project-slug}.yaml      # Post-build analysis per project
-├── metrics/
-│   ├── tool-usage.yaml          # Which Hive tools are used and how often
-│   ├── estimates.yaml           # Historical estimate vs actual data
-│   └── pattern-health.yaml      # Pattern quality metrics
-├── revenue/
-│   └── {project-slug}.yaml      # Per-project revenue entries
-├── maintenance/
-│   ├── schedule.yaml            # Automated maintenance rules
-│   └── log.yaml                 # Maintenance action history
 └── templates/
     ├── project/                  # Project scaffolding templates
     ├── feature/                  # Feature-level templates
     └── component/                # Component-level templates
-```
-
-Per-project additions (inside `projects/{project-slug}/`):
-```
-├── deploy.yaml                  # Deploy target config + deploy history
-├── health.yaml                  # Health check definitions + results
-├── errors.yaml                  # Error log with severity
-├── usage.yaml                   # Usage metrics and trends
-└── backlog.yaml                 # Iteration backlog (bugs, improvements, ideas)
 ```
 
 ### Why YAML?
@@ -243,14 +219,14 @@ apis:
           - { status: 409, message: "Email already exists" }
           - { status: 400, message: "Invalid input" }
 
-  - name: "stripe"
+  - name: "polar"
     type: "external"
-    base: "https://api.stripe.com/v1"
+    base: "https://api.polar.sh/v1"
     auth: "Bearer token"
     endpoints:
       - method: "POST"
-        path: "/customers"
-        docs: "https://stripe.com/docs/api/customers/create"
+        path: "/products"
+        docs: "https://docs.polar.sh/api-reference"
 ```
 
 ### Stack Preset (`stacks/{slug}.yaml`)
@@ -294,399 +270,6 @@ scripts:
   build: "next build"
   db:generate: "drizzle-kit generate"
   db:push: "drizzle-kit push"
-```
-
-### Deploy Config (`projects/{slug}/deploy.yaml`)
-
-```yaml
-project: "my-app"
-target: "vercel"
-command: "vercel --prod"
-directory: "/Users/me/projects/my-app"
-environment_vars:
-  - "DATABASE_URL"
-  - "AUTH_SECRET"
-pre_deploy:
-  - "npm run build"
-  - "npm run test"
-
-history:
-  - id: "deploy-001"
-    date: "2026-03-15T14:30:00Z"
-    target: "vercel"
-    status: "success"        # success | failed | rolled_back
-    duration_seconds: 45
-    version: "v1.2.0"
-    commit: "abc123f"
-    url: "https://my-app.vercel.app"
-    notes: "Added auth flow"
-
-  - id: "deploy-002"
-    date: "2026-03-16T10:00:00Z"
-    target: "vercel"
-    status: "failed"
-    duration_seconds: 12
-    error: "Build failed: type error in auth.ts"
-```
-
-### Health Config (`projects/{slug}/health.yaml`)
-
-```yaml
-project: "my-app"
-checks:
-  - name: "api-root"
-    type: "http"             # http | command
-    url: "https://my-app.vercel.app/api/health"
-    method: "GET"
-    expected_status: 200
-    timeout_ms: 5000
-
-  - name: "db-connection"
-    type: "command"
-    command: "curl -s https://my-app.vercel.app/api/health/db | jq .status"
-    expected_output: "ok"
-
-results:
-  - date: "2026-03-16T12:00:00Z"
-    checks:
-      - name: "api-root"
-        status: "green"      # green | yellow | red
-        response_ms: 120
-      - name: "db-connection"
-        status: "green"
-        response_ms: 340
-    overall: "green"
-
-  - date: "2026-03-15T12:00:00Z"
-    checks:
-      - name: "api-root"
-        status: "red"
-        error: "Connection refused"
-      - name: "db-connection"
-        status: "red"
-        error: "Timeout"
-    overall: "red"
-```
-
-### Error Log (`projects/{slug}/errors.yaml`)
-
-```yaml
-project: "my-app"
-source_command: "vercel logs my-app --since 24h 2>&1 | grep ERROR"
-entries:
-  - id: "err-001"
-    date: "2026-03-16T09:15:00Z"
-    severity: "error"        # warning | error | critical
-    message: "TypeError: Cannot read properties of undefined (reading 'email')"
-    endpoint: "/api/auth/signup"
-    count: 3
-    first_seen: "2026-03-16T09:15:00Z"
-    last_seen: "2026-03-16T09:45:00Z"
-    resolved: false
-
-  - id: "err-002"
-    date: "2026-03-15T14:00:00Z"
-    severity: "warning"
-    message: "Slow query: SELECT * FROM users took 2300ms"
-    endpoint: "/api/users"
-    count: 12
-    first_seen: "2026-03-14T10:00:00Z"
-    last_seen: "2026-03-15T14:00:00Z"
-    resolved: true
-    resolution: "Added index on users.email"
-```
-
-### Usage Data (`projects/{slug}/usage.yaml`)
-
-```yaml
-project: "my-app"
-source_command: "curl -s https://my-app.vercel.app/api/analytics/summary"
-entries:
-  - date: "2026-03-16"
-    requests: 1240
-    unique_visitors: 45
-    top_endpoints:
-      - path: "/api/auth/login"
-        count: 320
-      - path: "/api/users"
-        count: 180
-    error_rate: 0.02
-
-  - date: "2026-03-15"
-    requests: 980
-    unique_visitors: 38
-    top_endpoints:
-      - path: "/api/auth/login"
-        count: 290
-      - path: "/api/users"
-        count: 150
-    error_rate: 0.01
-
-trend:
-  direction: "up"            # up | down | flat
-  period: "7d"
-  change_pct: 15.2
-```
-
-### Backlog (`projects/{slug}/backlog.yaml`)
-
-```yaml
-project: "my-app"
-items:
-  - id: "bl-001"
-    type: "bug"              # bug | improvement | idea | maintenance
-    priority: "high"         # critical | high | medium | low
-    title: "Login fails with special characters in password"
-    description: "URL encoding issue in auth endpoint"
-    source: "error-log"      # error-log | usage | manual | retrospective
-    created: "2026-03-16"
-    status: "open"           # open | in_progress | done | wont_fix
-
-  - id: "bl-002"
-    type: "improvement"
-    priority: "medium"
-    title: "Add rate limiting to auth endpoints"
-    description: "Prevent brute force attempts"
-    source: "manual"
-    created: "2026-03-15"
-    status: "open"
-
-  - id: "bl-003"
-    type: "maintenance"
-    priority: "low"
-    title: "Update drizzle-orm to 0.35.x"
-    description: "New version has better SQLite support"
-    source: "fleet-scan"
-    created: "2026-03-14"
-    status: "open"
-```
-
-### Fleet Topology (`fleet/topology.yaml`)
-
-```yaml
-hosts:
-  - name: "vercel-main"
-    provider: "vercel"
-    type: "serverless"
-    projects: ["my-app", "api-service"]
-    region: "iad1"
-
-  - name: "hetzner-vps-1"
-    provider: "hetzner"
-    type: "vps"
-    ip: "65.21.x.x"
-    projects: ["background-jobs", "monitoring"]
-    specs: { cpu: 2, ram: "4GB", disk: "80GB" }
-
-domains:
-  - domain: "myapp.com"
-    registrar: "cloudflare"
-    dns: "cloudflare"
-    projects: ["my-app"]
-    expires: "2027-03-01"
-
-  - domain: "mytools.dev"
-    registrar: "namecheap"
-    dns: "cloudflare"
-    projects: ["tool-a", "tool-b"]
-    expires: "2026-12-15"
-```
-
-### Cost Registry (`fleet/costs.yaml`)
-
-```yaml
-entries:
-  - name: "Vercel Pro"
-    category: "hosting"      # hosting | domain | api | database | monitoring | other
-    provider: "vercel"
-    amount: 20.00
-    currency: "USD"
-    period: "monthly"
-    projects: ["my-app", "api-service"]
-
-  - name: "myapp.com"
-    category: "domain"
-    provider: "cloudflare"
-    amount: 12.00
-    currency: "USD"
-    period: "yearly"
-    projects: ["my-app"]
-
-  - name: "Stripe API"
-    category: "api"
-    provider: "stripe"
-    amount: 0.00
-    currency: "USD"
-    period: "monthly"
-    notes: "Pay-per-use, ~$2/mo at current volume"
-    projects: ["my-app"]
-
-totals:
-  monthly: 22.00
-  yearly: 276.00
-  last_updated: "2026-03-16"
-```
-
-### Retrospective (`retrospectives/{project-slug}.yaml`)
-
-```yaml
-project: "my-app"
-completed: "2026-03-16"
-build_sessions: 4
-total_duration_hours: 12
-
-planning_accuracy:
-  planned_components: 6
-  actual_components: 7
-  scope_change: "+1 (added rate limiting)"
-  score: 4                   # 1-5, how close to plan
-
-pattern_reuse:
-  patterns_available: 8
-  patterns_used: 5
-  patterns_modified: 1
-  new_patterns_extracted: 2
-  reuse_rate: 0.625
-
-knowledge_usage:
-  dependencies_preregistered: 4
-  dependencies_added: 1
-  decisions_from_history: 3
-  hallucinations_caught: 2
-
-lessons:
-  - "SQLite WAL mode is essential for any concurrent read scenario"
-  - "Should have registered the auth pattern earlier — rebuilt it from scratch"
-  - "Vercel deploy config should be a pattern, not ad-hoc"
-
-scores:
-  speed: 4                   # 1-5
-  quality: 4
-  knowledge_growth: 5
-  overall: 4.3
-```
-
-### Pattern Health Entry (`metrics/pattern-health.yaml`)
-
-```yaml
-patterns:
-  - slug: "drizzle-sqlite-setup"
-    total_uses: 8
-    recent_uses_30d: 2
-    modifications_after_use: 1
-    modification_rate: 0.125
-    last_used: "2026-03-10"
-    staleness: "fresh"       # fresh | aging | stale
-    confidence: "high"       # high | medium | low
-    notes: "Solid pattern, rarely needs changes"
-
-  - slug: "session-auth"
-    total_uses: 5
-    recent_uses_30d: 1
-    modifications_after_use: 3
-    modification_rate: 0.6
-    last_used: "2026-03-08"
-    staleness: "aging"
-    confidence: "medium"
-    notes: "Frequently modified — consider splitting into variants"
-```
-
-### Estimate Entry (`metrics/estimates.yaml`)
-
-```yaml
-estimates:
-  - project: "my-app"
-    date: "2026-03-01"
-    estimated_sessions: 3
-    actual_sessions: 4
-    estimated_components: 6
-    actual_components: 7
-    accuracy: 0.78
-    similar_projects: ["project-a", "project-b"]
-    factors:
-      - "Underestimated auth complexity"
-      - "Pattern reuse saved time on DB setup"
-
-  - project: "cli-tool"
-    date: "2026-02-20"
-    estimated_sessions: 2
-    actual_sessions: 2
-    estimated_components: 4
-    actual_components: 4
-    accuracy: 1.0
-    similar_projects: ["other-cli"]
-    factors:
-      - "Simple scope, good pattern coverage"
-```
-
-### Revenue Data (`revenue/{project-slug}.yaml`)
-
-```yaml
-project: "my-app"
-model: "subscription"        # subscription | one-time | usage-based | freemium | ad-supported
-entries:
-  - date: "2026-03"
-    amount: 49.00
-    currency: "USD"
-    customers: 3
-    source: "stripe"
-    notes: "First paying customers"
-
-  - date: "2026-02"
-    amount: 0.00
-    currency: "USD"
-    customers: 0
-    source: "stripe"
-    notes: "Pre-launch"
-
-summary:
-  mrr: 49.00
-  total_revenue: 49.00
-  total_customers: 3
-  trend: "up"
-  last_updated: "2026-03-16"
-```
-
-### Maintenance Schedule (`maintenance/schedule.yaml`)
-
-```yaml
-rules:
-  - id: "maint-001"
-    name: "Dependency security scan"
-    type: "command"
-    command: "npm audit --json"
-    schedule: "weekly"
-    applies_to: "all"        # all | specific project slugs
-    auto_apply: false         # if true, auto-fix when possible
-    last_run: "2026-03-14"
-
-  - id: "maint-002"
-    name: "Pattern staleness check"
-    type: "hive_tool"
-    tool: "hive_pattern_health"
-    schedule: "monthly"
-    applies_to: "all"
-    auto_apply: false
-    last_run: "2026-03-01"
-
-  - id: "maint-003"
-    name: "SSL certificate expiry check"
-    type: "command"
-    command: "echo | openssl s_client -connect $DOMAIN:443 2>/dev/null | openssl x509 -noout -enddate"
-    schedule: "weekly"
-    applies_to: ["my-app", "api-service"]
-    auto_apply: false
-    last_run: "2026-03-14"
-
-log:
-  - date: "2026-03-14"
-    rule: "maint-001"
-    result: "2 low-severity vulnerabilities found"
-    action_taken: "Added to backlog"
-  - date: "2026-03-14"
-    rule: "maint-003"
-    result: "All certs valid, nearest expiry 2026-09-01"
-    action_taken: "None needed"
 ```
 
 ---
@@ -1058,747 +641,6 @@ Output:
   Ranked results across all knowledge types
 ```
 
-### Product Lifecycle Tools
-
-#### `hive_deploy`
-Execute the configured deploy command for a project, record the result.
-
-```
-Input:
-  project: string            — project slug
-  dry_run?: boolean          — if true, show what would run without executing (default: true)
-  notes?: string             — deploy notes (e.g., "Added auth flow")
-
-Output:
-  {
-    deploy_id: string,
-    status: "success" | "failed" | "dry_run",
-    target: string,
-    duration_seconds: number,
-    url?: string,
-    error?: string,
-    command_executed: string
-  }
-
-Side effects:
-  Runs pre_deploy commands, then deploy command from deploy.yaml
-  Appends deploy record to deploy.yaml history
-  If dry_run, only shows commands that would execute
-```
-
-#### `hive_check_health`
-Run health checks for a project and return traffic-light status.
-
-```
-Input:
-  project: string            — project slug
-
-Output:
-  {
-    overall: "green" | "yellow" | "red",
-    checks: [
-      {
-        name: string,
-        status: "green" | "yellow" | "red",
-        response_ms?: number,
-        error?: string
-      }
-    ],
-    last_checked: string
-  }
-
-Side effects:
-  Executes HTTP requests or commands defined in health.yaml
-  Appends result to health.yaml results
-  Returns "not configured" if no health.yaml exists (with setup instructions)
-```
-
-#### `hive_get_errors`
-Retrieve and filter recent errors from a running project.
-
-```
-Input:
-  project: string            — project slug
-  severity?: string          — filter: "warning" | "error" | "critical"
-  since?: string             — ISO date or relative ("24h", "7d")
-  resolved?: boolean         — filter by resolution status
-
-Output:
-  {
-    entries: ErrorEntry[],
-    summary: {
-      total: number,
-      by_severity: { warning: number, error: number, critical: number },
-      unresolved: number
-    }
-  }
-
-Side effects:
-  If source_command is configured, runs it to pull fresh errors first
-  Appends new entries to errors.yaml
-```
-
-#### `hive_get_usage`
-Get usage stats for a project with trend computation.
-
-```
-Input:
-  project: string            — project slug
-  period?: string            — "7d" | "30d" | "90d" (default: "7d")
-
-Output:
-  {
-    entries: UsageEntry[],
-    trend: {
-      direction: "up" | "down" | "flat",
-      change_pct: number,
-      period: string
-    },
-    summary: {
-      avg_daily_requests: number,
-      avg_daily_visitors: number,
-      avg_error_rate: number
-    }
-  }
-
-Side effects:
-  If source_command is configured, runs it to pull fresh usage data first
-  Updates trend in usage.yaml
-```
-
-#### `hive_add_to_backlog`
-Add a bug, improvement, idea, or maintenance item to a project's backlog.
-
-```
-Input:
-  project: string
-  type: "bug" | "improvement" | "idea" | "maintenance"
-  title: string
-  description?: string
-  priority?: "critical" | "high" | "medium" | "low"   — default: "medium"
-  source?: string            — where this came from (e.g., "error-log", "manual")
-
-Output:
-  {
-    id: string,
-    item: BacklogItem
-  }
-
-Side effects:
-  Appends item to backlog.yaml with auto-incremented ID
-  Creates backlog.yaml if it doesn't exist
-```
-
-#### `hive_get_backlog`
-Query a project's backlog with filters.
-
-```
-Input:
-  project: string
-  type?: string              — filter by type
-  priority?: string          — filter by priority
-  status?: string            — filter by status (default: "open")
-
-Output:
-  {
-    items: BacklogItem[],
-    summary: {
-      total: number,
-      by_type: { bug: number, improvement: number, idea: number, maintenance: number },
-      by_priority: { critical: number, high: number, medium: number, low: number }
-    }
-  }
-```
-
-#### `hive_archive_project`
-Mark a project as archived, preserve all knowledge it generated.
-
-```
-Input:
-  project: string
-  reason?: string            — why you're archiving
-
-Output:
-  {
-    archived: true,
-    knowledge_preserved: {
-      patterns_extracted: number,
-      decisions_logged: number,
-      dependencies_registered: number
-    }
-  }
-
-Side effects:
-  Sets project status to "archived" in architecture.yaml
-  Logs archival decision in decisions.yaml
-  Knowledge (patterns, deps, decisions) remains in registry — only project is inactive
-```
-
-### Fleet Management Tools
-
-#### `hive_fleet_status`
-Scan all projects and aggregate health, errors, usage, and costs into a fleet overview.
-
-```
-Input:
-  include_archived?: boolean  — include archived projects (default: false)
-
-Output:
-  {
-    projects: [
-      {
-        name: string,
-        status: string,
-        health: "green" | "yellow" | "red" | "unknown",
-        last_deploy: string | null,
-        recent_errors: number,
-        usage_trend: "up" | "down" | "flat" | "unknown",
-        monthly_cost: number
-      }
-    ],
-    fleet_summary: {
-      total_projects: number,
-      healthy: number,
-      unhealthy: number,
-      total_monthly_cost: number,
-      total_monthly_revenue: number
-    }
-  }
-
-Side effects:
-  Scans all project directories under ~/.hive/projects/
-  Reads each project's health.yaml, errors.yaml, usage.yaml
-  Reads fleet/costs.yaml and revenue/ files
-  Computed on-demand, no separate fleet database
-```
-
-#### `hive_fleet_scan_deps`
-Find outdated or vulnerable dependencies across all projects.
-
-```
-Input:
-  package?: string           — scan for a specific package (default: scan all)
-  severity?: string          — minimum vulnerability severity to report
-
-Output:
-  {
-    outdated: [
-      {
-        package: string,
-        current_version: string,
-        latest_version: string,
-        projects: string[]
-      }
-    ],
-    vulnerabilities: [
-      {
-        package: string,
-        severity: string,
-        advisory: string,
-        projects: string[]
-      }
-    ]
-  }
-
-Side effects:
-  Reads registered dependencies from knowledge/dependencies/
-  Cross-references with project architecture files
-  Does NOT run npm audit — reads from Hive's own registry
-```
-
-#### `hive_fleet_update_pattern`
-Propagate a pattern change to all projects that use it.
-
-```
-Input:
-  pattern: string            — pattern slug
-  dry_run?: boolean          — if true, show affected projects without modifying (default: true)
-
-Output:
-  {
-    pattern: string,
-    affected_projects: [
-      {
-        project: string,
-        files_to_update: string[],
-        diff_preview: string
-      }
-    ],
-    applied: boolean          — false if dry_run
-  }
-
-Side effects:
-  If not dry_run, updates pattern files in each affected project
-  Logs the update in each project's decisions.yaml
-  Dry-run by default — always show before modifying
-```
-
-#### `hive_fleet_costs`
-Get cost breakdown across the fleet by project, category, or provider.
-
-```
-Input:
-  group_by?: "project" | "category" | "provider"   — default: "project"
-
-Output:
-  {
-    breakdown: [
-      {
-        name: string,
-        monthly: number,
-        yearly: number,
-        items: CostEntry[]
-      }
-    ],
-    totals: {
-      monthly: number,
-      yearly: number
-    },
-    vs_revenue: {
-      monthly_cost: number,
-      monthly_revenue: number,
-      net: number
-    }
-  }
-```
-
-#### `hive_whats_next`
-Priority-scored recommendations for what to work on, based on health, errors, usage, backlog, and revenue.
-
-```
-Input:
-  available_time?: "quick" | "session" | "deep"   — how much time you have (default: "session")
-  focus?: string             — optional focus area (e.g., "bugs", "growth", "maintenance")
-
-Output:
-  {
-    recommendations: [
-      {
-        project: string,
-        action: string,
-        reason: string,
-        priority_score: number,     — 0-100, weighted by urgency/impact
-        estimated_effort: "trivial" | "small" | "medium" | "large",
-        source: string              — what signal triggered this (error, usage drop, etc.)
-      }
-    ]
-  }
-
-Side effects:
-  Scans all projects' backlogs, errors, health, usage
-  Scores using: critical errors > high backlog items > usage trends > maintenance > improvements
-  Filters by available_time (quick = trivial/small tasks only)
-```
-
-### Self-Improving Hive Tools
-
-#### `hive_retrospective`
-Analyze a completed project build: planning accuracy, pattern reuse, lessons learned.
-
-```
-Input:
-  project: string            — project slug
-
-Output:
-  {
-    build_sessions: number,
-    planning_accuracy: {
-      planned_components: number,
-      actual_components: number,
-      scope_change: string,
-      score: number              — 1-5
-    },
-    pattern_reuse: {
-      patterns_available: number,
-      patterns_used: number,
-      patterns_modified: number,
-      new_patterns_extracted: number,
-      reuse_rate: number
-    },
-    knowledge_usage: {
-      dependencies_preregistered: number,
-      dependencies_added: number,
-      decisions_from_history: number,
-      hallucinations_caught: number
-    },
-    lessons: string[],
-    scores: {
-      speed: number,
-      quality: number,
-      knowledge_growth: number,
-      overall: number
-    }
-  }
-
-Side effects:
-  Reads project's architecture, decisions, patterns used
-  Compares initial plan vs final state
-  Saves retrospective to ~/.hive/retrospectives/{project}.yaml
-```
-
-#### `hive_knowledge_gaps`
-Find unregistered patterns, dependencies, and anti-patterns in your knowledge base.
-
-```
-Input:
-  scope?: "all" | string     — "all" or a specific project slug (default: "all")
-
-Output:
-  {
-    unregistered_patterns: [
-      {
-        description: string,
-        evidence: string[],         — projects where this appears
-        suggested_name: string
-      }
-    ],
-    unregistered_dependencies: [
-      {
-        name: string,
-        used_in: string[],
-        has_surface: boolean
-      }
-    ],
-    potential_antipatterns: [
-      {
-        description: string,
-        evidence: string[],
-        suggestion: string
-      }
-    ]
-  }
-
-Side effects:
-  Scans all project architectures and decisions
-  Cross-references with registered patterns and dependencies
-  Identifies repeated code/decisions that aren't captured as patterns
-```
-
-#### `hive_pattern_health`
-Score pattern quality: usage rate, modification rate, staleness.
-
-```
-Input:
-  pattern?: string           — specific pattern slug, or all if omitted
-
-Output:
-  {
-    patterns: [
-      {
-        slug: string,
-        total_uses: number,
-        recent_uses_30d: number,
-        modification_rate: number,
-        staleness: "fresh" | "aging" | "stale",
-        confidence: "high" | "medium" | "low",
-        recommendation: string       — e.g., "Consider splitting into variants"
-      }
-    ],
-    summary: {
-      total: number,
-      fresh: number,
-      aging: number,
-      stale: number,
-      avg_confidence: string
-    }
-  }
-
-Side effects:
-  Reads pattern usage data from all projects
-  Updates metrics/pattern-health.yaml
-```
-
-#### `hive_estimate`
-Predict effort for a project based on similar past projects.
-
-```
-Input:
-  description: string        — what you're planning to build
-  components?: number        — estimated component count
-  stack?: string             — stack preset slug
-
-Output:
-  {
-    estimated_sessions: number,
-    confidence: "high" | "medium" | "low",
-    similar_projects: [
-      {
-        project: string,
-        similarity: number,         — 0-1
-        actual_sessions: number,
-        components: number
-      }
-    ],
-    factors: {
-      pattern_coverage: number,     — % of likely needs covered by existing patterns
-      stack_familiarity: number,    — 0-1, how well you know this stack
-      scope_complexity: string      — "simple" | "moderate" | "complex"
-    },
-    historical_accuracy: number     — avg accuracy of past estimates
-  }
-
-Side effects:
-  Reads metrics/estimates.yaml for historical data
-  Compares against all past project architectures
-```
-
-### Sovereign Builder OS Tools
-
-#### `hive_idea_pipeline`
-Auto-score all raw ideas against current capabilities, patterns, and available time.
-
-```
-Input:
-  filter?: "raw" | "evaluated" | "all"   — which ideas to score (default: "raw")
-
-Output:
-  {
-    ideas: [
-      {
-        slug: string,
-        name: string,
-        capability_score: number,    — 0-100, how much of this you can build with existing knowledge
-        pattern_coverage: number,    — % of likely needs covered
-        estimated_sessions: number,
-        priority_score: number,      — 0-100, weighted by feasibility + impact + effort
-        recommendation: "build next" | "build soon" | "park" | "needs evaluation"
-      }
-    ]
-  }
-
-Side effects:
-  Reads all ideas from ~/.hive/ideas/
-  Cross-references with patterns, stacks, past projects
-  Does NOT modify ideas — read-only scoring
-```
-
-#### `hive_track_revenue`
-Add or query revenue data for a project.
-
-```
-Input:
-  project: string
-  action: "add" | "query"
-  entry?: {                    — required if action is "add"
-    date: string,              — month (e.g., "2026-03")
-    amount: number,
-    currency?: string,         — default: "USD"
-    customers?: number,
-    source?: string,
-    notes?: string
-  }
-  period?: string              — for query: "3m" | "6m" | "12m" | "all" (default: "all")
-
-Output:
-  {
-    entries: RevenueEntry[],
-    summary: {
-      mrr: number,
-      total_revenue: number,
-      total_customers: number,
-      trend: "up" | "down" | "flat"
-    }
-  }
-
-Side effects:
-  If action is "add", appends entry to revenue/{project}.yaml
-  Updates summary calculations
-```
-
-#### `hive_fleet_revenue`
-Cross-fleet revenue vs cost dashboard.
-
-```
-Input:
-  period?: string              — "3m" | "6m" | "12m" | "all" (default: "all")
-
-Output:
-  {
-    projects: [
-      {
-        name: string,
-        mrr: number,
-        monthly_cost: number,
-        net: number,
-        customers: number,
-        trend: "up" | "down" | "flat"
-      }
-    ],
-    fleet_totals: {
-      total_mrr: number,
-      total_monthly_cost: number,
-      total_net: number,
-      total_customers: number,
-      profitable_projects: number,
-      unprofitable_projects: number
-    }
-  }
-
-Side effects:
-  Reads all revenue/ files and fleet/costs.yaml
-  Computed on-demand, no separate database
-```
-
-#### `hive_maintenance_run`
-Execute maintenance rules from the schedule (dry-run by default).
-
-```
-Input:
-  rule?: string              — specific rule ID, or all if omitted
-  dry_run?: boolean          — if true, show what would run (default: true)
-
-Output:
-  {
-    results: [
-      {
-        rule_id: string,
-        name: string,
-        status: "ok" | "action_needed" | "failed" | "dry_run",
-        output: string,
-        action_taken?: string,
-        projects_affected: string[]
-      }
-    ]
-  }
-
-Side effects:
-  If not dry_run, executes commands from maintenance/schedule.yaml
-  Appends results to maintenance/log.yaml
-  May add items to project backlogs if issues found
-  Dry-run by default — always preview before executing
-```
-
-#### `hive_build_from_description`
-Natural language description to full orchestrated build pipeline (idea → evaluate → plan → build).
-
-```
-Input:
-  description: string        — natural language description of what to build
-  auto_approve?: boolean     — if true, skip checkpoints (default: false)
-
-Output:
-  {
-    pipeline: {
-      idea: { slug: string, evaluation: object },
-      project: { slug: string, architecture: object },
-      build_plan: { phases: number, steps: number },
-      status: "ready" | "awaiting_approval" | "building" | "complete"
-    },
-    next_action: string       — what happens next / what needs approval
-  }
-
-Side effects:
-  Orchestrates existing tools in sequence:
-    1. hive_capture_idea (structures the description)
-    2. hive_evaluate_idea (feasibility check)
-    3. hive_promote_idea (creates project)
-    4. hive_plan_build (generates build plan)
-    5. hive_execute_step (if auto_approve, begins building)
-  Each step can pause for approval if auto_approve is false
-  This is orchestration, not new capability — composes existing tools
-```
-
-#### `hive_export_knowledge`
-Export patterns, dependencies, and decisions as a portable bundle.
-
-```
-Input:
-  scope?: "all" | string[]   — "all" or specific categories: ["patterns", "dependencies", "decisions", "stacks"]
-  format?: "yaml" | "json"   — output format (default: "yaml")
-  output_path?: string       — where to write the bundle (default: ~/.hive/exports/)
-
-Output:
-  {
-    exported: {
-      patterns: number,
-      dependencies: number,
-      decisions: number,
-      stacks: number,
-      antipatterns: number
-    },
-    path: string,
-    size_kb: number
-  }
-
-Side effects:
-  Creates a portable bundle file at output_path
-  Bundle includes all selected knowledge with metadata
-  Can be imported into another Hive instance
-```
-
-#### `hive_autonomy_status`
-View and control full-autonomy build sessions.
-
-```
-Input:
-  action: "status" | "approve" | "reject" | "pause" | "resume"
-  session_id?: string        — required for approve/reject/pause/resume
-
-Output:
-  {
-    sessions: [
-      {
-        id: string,
-        project: string,
-        status: "running" | "paused" | "awaiting_approval" | "complete" | "failed",
-        current_step: string,
-        progress: { completed: number, total: number },
-        pending_approval?: {
-          action: string,
-          description: string,
-          risk_level: "low" | "medium" | "high"
-        }
-      }
-    ]
-  }
-
-Side effects:
-  If action is "approve", resumes the paused session
-  If action is "reject", rolls back pending action and pauses
-  If action is "pause", pauses a running session at next safe point
-  If action is "resume", continues a paused session
-  All session state stored in project's build session files
-```
-
----
-
-## External Integration Design
-
-Hive uses a **recipe pattern** for all external integrations — it stores configuration, not SDKs.
-
-### Principles
-
-1. **Config is YAML** — deploy commands, health check URLs, error source commands, maintenance scripts are all stored as YAML configuration in the project or fleet directories.
-
-2. **Execution is shell commands** — Hive runs whatever command you configured. `vercel --prod`, `docker compose up -d`, `ssh deploy@server ./deploy.sh` — it doesn't care. This makes Hive deploy-target agnostic.
-
-3. **Data ingestion is pull-based** — there's no daemon running. When you ask Hive for errors or usage data, it runs the configured source command at that moment. This keeps Hive simple and stateless between sessions.
-
-4. **Graceful degradation** — every tool works with zero configuration. If you call `hive_check_health` on a project with no `health.yaml`, it returns a helpful message explaining how to set it up, not an error. Tools are always safe to call.
-
-### Example: Deploy Recipe
-
-```yaml
-# In projects/my-app/deploy.yaml
-target: "vercel"
-command: "vercel --prod"
-directory: "/Users/me/projects/my-app"
-pre_deploy:
-  - "npm run build"
-  - "npm run test"
-```
-
-Hive doesn't know what Vercel is. It just runs `npm run build`, then `npm run test`, then `vercel --prod` in the configured directory. Swap "vercel" for "docker compose up -d" and Hive works exactly the same way.
-
-### Example: Error Source Recipe
-
-```yaml
-# In projects/my-app/errors.yaml
-source_command: "vercel logs my-app --since 24h 2>&1 | grep ERROR"
-```
-
-Hive runs this command, parses the output, and stores structured error entries. The user controls what "errors" means for their project.
-
 ---
 
 ## Compound Loop
@@ -1830,6 +672,1300 @@ Next idea
 ```
 
 By project 10: Claude has your entire playbook. Every library you use, every pattern you prefer, every architectural decision you've made. New projects are mostly assembly from verified parts.
+
+---
+
+## Phase 11-16 Storage Additions
+
+```
+~/.hive/
+  meta/                                  # Phase 11 — Self-Replication
+    telemetry.yaml                       # Tool call log: tool, args, duration, outcome, user_action
+    evolution_log.yaml                   # History of self-modifications
+    proposals/
+      {id}.yaml                          # Improvement proposals with evidence
+    versions/
+      {timestamp}/                       # Rollback snapshots
+
+  integrations/                          # Phase 12 — Revenue
+    polar.yaml                           # Polar.sh API key (via env var), connected products
+    analytics.yaml                       # Plausible/PostHog/Simple Analytics keys
+
+  revenue/                               # Phase 12 — Revenue
+    snapshots/
+      {date}.yaml                        # Daily MRR/ARR/churn/LTV across all products
+    experiments/
+      {id}.yaml                          # A/B test definitions and results
+    forecasts/
+      {project}.yaml                     # Revenue projections
+
+  marketing/                             # Phase 13 — Content & Marketing
+    {project}/
+      launch-playbook.yaml               # Generated launch assets
+      content-calendar.yaml              # Scheduled content with status
+      campaigns/
+        {id}.yaml                        # Multi-channel campaign + results
+      assets/
+        landing-page.html
+        readme.md
+        changelog.md                     # Auto-generated from git + decisions
+    analytics/
+      content-performance.yaml           # Traffic/conversion attribution per content piece
+      messaging-effectiveness.yaml       # Which messages resonated
+
+  business/                              # Phase 14 — Business Operations
+    entity.yaml                          # Business name, EIN (env var), address, payment methods
+    clients/
+      {slug}.yaml                        # Client profiles, billing, projects, contracts
+    invoices/
+      {id}.yaml                          # Invoice records with line items + status
+    contracts/
+      templates/                         # saas-terms, freelance, privacy-policy, etc.
+      generated/
+        {id}.yaml                        # Generated contracts with signing status
+    expenses/
+      {year}/
+        {month}.yaml                     # Categorized expenses by vendor + project
+    compliance/
+      {project}/
+        audit.yaml                       # Last compliance scan results
+        privacy-policy.md
+        terms.md
+    tax/
+      {year}.yaml                        # Annual tax summary
+
+  marketplace/                           # Phase 15 — Knowledge Marketplace
+    packages/
+      {slug}/
+        manifest.yaml                    # Metadata, pricing, version, source patterns
+        contents/                        # Sanitized distributable files
+        preview.yaml                     # Public preview (no source code)
+        analytics.yaml                   # Downloads, ratings, revenue
+    export-rules.yaml                    # What's exportable, secrets exclusion, min confidence
+    storefront.yaml                      # Marketplace profile + settings
+
+  mesh/                                  # Phase 16 — Hive Mesh
+    identity.yaml                        # Peer ID (public key), display name, specialties
+    peers/
+      {peer_id}.yaml                     # Known peers with reputation + trust level
+    shared/
+      outbound/                          # Anonymized patterns/anti-patterns you've shared
+        patterns/
+        anti-patterns/
+        benchmarks/
+      inbound/                           # Knowledge received from mesh
+        patterns/
+        anti-patterns/
+        benchmarks/
+    delegations/
+      {id}.yaml                          # A2A task delegations (sent + received)
+    reputation.yaml                      # Your reputation score + history
+    mesh-settings.yaml                   # What to share, accept, auto-merge
+```
+
+---
+
+## Phase 11-16 Data Models
+
+### Telemetry (`meta/telemetry.yaml`) — Phase 11
+
+```yaml
+entries:
+  - timestamp: "2026-04-15T10:32:00Z"
+    tool: "hive_find_patterns"
+    args: { query: "auth middleware", stack: ["typescript"] }
+    duration_ms: 45
+    result_size: 3              # number of results returned
+    user_action: "used"         # used | ignored | re-called | errored
+    session: "project-xyz"
+```
+
+### Proposals (`meta/proposals/{id}.yaml`) — Phase 11
+
+```yaml
+id: "prop-001"
+type: "new_tool"                # new_tool | refactor_tool | remove_tool | schema_change | ui_change
+status: "pending"               # pending | approved | rejected | applied | rolled_back
+created: "2026-04-20"
+target: null                    # existing tool name if refactor/remove
+proposal:
+  name: "hive_quick_pattern"
+  description: "Shortcut to register a pattern from a single file without full metadata"
+  reasoning: |
+    In the last 30 days, hive_register_pattern was called 12 times.
+    8 of those calls had only 1 file and minimal tags.
+    A simplified tool would save ~30 seconds per call.
+  input_schema:
+    file_path: "string — path to the file"
+    name: "string — pattern name"
+    tags: "string[] — optional, auto-inferred if omitted"
+  output: "Pattern saved with auto-generated metadata"
+  estimated_effort: "trivial"
+evidence:
+  tool_calls_analyzed: 12
+  pattern_detected: "single-file registration with minimal metadata"
+  time_saved_per_call: "~30s"
+```
+
+### Evolution Log (`meta/evolution_log.yaml`) — Phase 11
+
+```yaml
+evolutions:
+  - id: "evo-001"
+    date: "2026-04-21"
+    type: "new_tool"
+    proposal_id: "prop-001"
+    description: "Added hive_quick_pattern — single-file pattern registration shortcut"
+    files_changed:
+      - "src/server/tools/quick-pattern.ts"
+      - "src/server/index.ts"
+    rollback_version: "2026-04-21T09:00:00Z"
+    outcome: "active"           # active | rolled_back
+```
+
+### Revenue Snapshot (`revenue/snapshots/{date}.yaml`) — Phase 12
+
+```yaml
+date: "2026-05-01"
+total_mrr: 4250.00
+total_arr: 51000.00
+products:
+  - project: "saas-tool-x"
+    mrr: 2800.00
+    customers: 142
+    churn_rate: 3.2            # monthly %
+    ltv: 875.00
+    plan_breakdown:
+      free: 890
+      starter: 98
+      pro: 44
+    trend: "growing"           # growing | stable | declining | new
+    growth_rate: 8.5           # month-over-month %
+```
+
+### Experiment (`revenue/experiments/{id}.yaml`) — Phase 12
+
+```yaml
+id: "exp-001"
+project: "saas-tool-x"
+type: "pricing"
+status: "running"              # draft | running | completed | cancelled
+started: "2026-04-15"
+hypothesis: "Lowering starter plan from $19 to $14 will increase conversions enough to offset per-user revenue loss"
+variants:
+  control:
+    description: "Starter at $19/mo"
+    traffic_pct: 50
+    conversions: 23
+    revenue: 437.00
+  treatment:
+    description: "Starter at $14/mo"
+    traffic_pct: 50
+    conversions: 41
+    revenue: 574.00
+duration_days: 30
+confidence: 0.94               # statistical confidence
+result: null                   # populated when completed
+recommendation: null
+```
+
+### Integration (`integrations/polar.yaml`) — Phase 12
+
+```yaml
+provider: "polar"
+api_key_env: "HIVE_POLAR_KEY"        # references env var, never stored in plaintext
+connected_projects:
+  - project: "saas-tool-x"
+    polar_product_id: "prod_xxx"
+  - project: "dev-utility-y"
+    polar_product_id: "prod_yyy"
+sync_frequency: "daily"
+last_sync: "2026-05-01T06:00:00Z"
+```
+
+### Launch Playbook (`marketing/{project}/launch-playbook.yaml`) — Phase 13
+
+```yaml
+project: "saas-tool-x"
+generated: "2026-05-10"
+audience: "Solo developers building SaaS products"
+value_prop: "Ship faster by eliminating AI hallucination in your coding workflow"
+assets:
+  landing_page:
+    status: "generated"        # generated | reviewed | published
+    url: null
+    sections:
+      - hero: "Stop Claude from hallucinating your APIs"
+      - features:
+          - title: "Architecture Guardrails"
+            description: "Every coding session starts with your real architecture, not guesses"
+            source_component: "architecture-engine"
+          - title: "Verified Patterns"
+            description: "200+ battle-tested code patterns from real projects"
+            source_component: "knowledge-registry"
+      - social_proof: null
+      - pricing: { from_polar: true }
+  readme:
+    status: "generated"
+    content: "..."
+  tweets:
+    - type: "launch_thread"
+      status: "draft"
+      posts:
+        - "🚀 Just shipped {product}: {one-liner}"
+        - "The problem: {problem statement from idea}"
+        - "How it works: {3-step flow from architecture}"
+        - "Try it: {url}"
+  product_hunt:
+    tagline: "..."
+    description: "..."
+    first_comment: "..."
+    maker_story: "..."
+  changelog:
+    status: "auto_updating"
+    entries: []
+  email_sequences:
+    onboarding:
+      - { day: 0, subject: "Welcome to {product}", body: "..." }
+      - { day: 3, subject: "Did you try {key feature}?", body: "..." }
+      - { day: 7, subject: "Builders who use {pattern} ship 3x faster", body: "..." }
+```
+
+### Content Performance (`marketing/analytics/content-performance.yaml`) — Phase 13
+
+```yaml
+entries:
+  - content_id: "tweet-launch-001"
+    project: "saas-tool-x"
+    type: "tweet"
+    published: "2026-05-12"
+    impressions: 12400
+    clicks: 340
+    conversions: 23
+    conversion_rate: 6.8
+    revenue_attributed: 322.00
+```
+
+### Business Entity (`business/entity.yaml`) — Phase 14
+
+```yaml
+name: "Twofold Technologies"
+type: "sole_proprietorship"
+ein: "env:HIVE_EIN"
+state: "Kansas"
+address: "env:HIVE_BUSINESS_ADDRESS"
+payment_methods:
+  - type: "polar"
+    organization_id: "org_xxx"
+```
+
+### Client (`business/clients/{slug}.yaml`) — Phase 14
+
+```yaml
+name: "Acme Corp"
+slug: "acme-corp"
+contact:
+  name: "Jane Smith"
+  email: "jane@acme.com"
+  role: "VP Engineering"
+type: "consulting"
+billing:
+  rate: 175
+  currency: "USD"
+  terms: "net_30"
+  total_invoiced: 24500.00
+  total_paid: 21000.00
+  outstanding: 3500.00
+projects:
+  - project: "acme-migration"
+    status: "active"
+    started: "2026-03-01"
+    hours_logged: 140
+contracts:
+  - contract_id: "con-001"
+    type: "freelance"
+    signed: "2026-03-01"
+    expires: "2026-09-01"
+```
+
+### Invoice (`business/invoices/{id}.yaml`) — Phase 14
+
+```yaml
+id: "INV-2026-042"
+client: "acme-corp"
+project: "acme-migration"
+status: "sent"                 # draft | sent | paid | overdue | cancelled
+created: "2026-05-01"
+due: "2026-05-31"
+line_items:
+  - description: "DXP migration consulting — April 2026"
+    quantity: 40
+    rate: 175.00
+    amount: 7000.00
+  - description: "Hosting setup and configuration"
+    quantity: 1
+    rate: 500.00
+    amount: 500.00
+subtotal: 7500.00
+tax: 0
+total: 7500.00
+payment_instructions: "Pay via Polar checkout: {url}"
+reminders_sent: 0
+```
+
+### Expenses (`business/expenses/{year}/{month}.yaml`) — Phase 14
+
+```yaml
+month: "2026-05"
+total: 487.50
+categories:
+  hosting:
+    total: 245.00
+    items:
+      - { vendor: "Vercel", amount: 20.00, project: "saas-tool-x" }
+      - { vendor: "Railway", amount: 25.00, project: "api-guard" }
+      - { vendor: "Hetzner", amount: 200.00, project: "fleet-vps" }
+  apis:
+    total: 142.50
+    items:
+      - { vendor: "Anthropic", amount: 120.00, note: "Claude API" }
+      - { vendor: "Resend", amount: 22.50, project: "saas-tool-x" }
+  tools:
+    total: 100.00
+    items:
+      - { vendor: "GitHub", amount: 4.00, note: "Pro plan" }
+      - { vendor: "Figma", amount: 96.00, note: "Annual, amortized" }
+```
+
+### Package Manifest (`marketplace/packages/{slug}/manifest.yaml`) — Phase 15
+
+```yaml
+name: "Next.js SaaS Starter"
+slug: "next-saas-starter"
+version: "2.1.0"
+description: "Production-ready SaaS boilerplate with auth, billing, and admin dashboard. Battle-tested across 8 products."
+author: "Dakota / Twofold Technologies"
+license: "commercial"
+pricing:
+  type: "one_time"
+  price: 49.00
+  currency: "USD"
+type: "stack_preset"           # pattern | stack_preset | decision_framework | hive_template
+tags: ["saas", "next.js", "drizzle", "auth", "polar", "typescript"]
+source_patterns:
+  - "drizzle-sqlite-setup"
+  - "session-auth"
+  - "polar-checkout"
+  - "next-api-routes"
+  - "admin-dashboard-layout"
+source_projects: 8
+confidence_score: 0.96
+includes:
+  files: 47
+  patterns: 5
+  stack_config: true
+  decision_guide: true
+  documentation: true
+```
+
+### Export Rules (`marketplace/export-rules.yaml`) — Phase 15
+
+```yaml
+rules:
+  always_exclude:
+    - "*.env"
+    - "**/credentials/**"
+    - "**/.hive/integrations/**"
+    - "**/.hive/business/**"
+  sanitize:
+    - pattern: "api_key|secret|password|token"
+      action: "replace_with_placeholder"
+  include_only_verified: true
+  minimum_confidence: 0.8
+  minimum_usage: 3
+```
+
+### Mesh Identity (`mesh/identity.yaml`) — Phase 16
+
+```yaml
+peer_id: "hive-dk-7f3a9b"
+display_name: "Dakota"
+public_key: "ed25519:..."
+specialties:
+  - "saas-development"
+  - "next.js"
+  - "drizzle-orm"
+  - "enterprise-dxp"
+  - "auth-systems"
+reputation:
+  score: 94
+  patterns_shared: 23
+  patterns_adopted: 156
+  anti_patterns_contributed: 8
+  delegations_completed: 12
+  delegations_failed: 0
+joined: "2026-07-01"
+```
+
+### Mesh Peer (`mesh/peers/{peer_id}.yaml`) — Phase 16
+
+```yaml
+peer_id: "hive-mx-2e8c1d"
+display_name: "Alex"
+specialties: ["infrastructure", "devops", "kubernetes", "rust"]
+reputation_score: 87
+patterns_from_them: 5
+patterns_to_them: 3
+last_interaction: "2026-08-15"
+trust_level: "verified"        # unknown | known | verified | trusted
+```
+
+### Shared Pattern (`mesh/shared/outbound/patterns/{slug}.yaml`) — Phase 16
+
+```yaml
+original_slug: "session-auth"
+shared_as: "mesh-session-auth-dk7f"
+shared_date: "2026-07-15"
+version: "1.3.0"
+metadata:
+  description: "Session-based auth with secure cookie handling"
+  tags: ["auth", "session", "cookies", "typescript"]
+  stack: ["typescript", "node"]
+  confidence_score: 0.96
+  used_in_projects: 12                  # number only, not project names
+  # NO actual code shared — only structure, interface, and usage notes
+  structure:
+    files: ["auth/session.ts", "auth/middleware.ts", "auth/types.ts"]
+    exports: ["createSession", "validateSession", "destroySession", "authMiddleware"]
+    dependencies: ["iron-session"]
+  usage_notes: "Always set secure: true and httpOnly: true on cookies"
+  gotchas: ["Don't store sensitive data in the session object — only the user ID"]
+mesh_stats:
+  adoptions: 34
+  rating: 4.8
+  reports: 0
+```
+
+### A2A Delegation (`mesh/delegations/{id}.yaml`) — Phase 16
+
+```yaml
+id: "del-001"
+type: "outbound"               # outbound | inbound
+status: "completed"            # pending | accepted | in_progress | completed | failed | rejected
+created: "2026-08-10"
+protocol: "a2a"
+request:
+  description: "Need a Dockerfile pattern for a Next.js app with Drizzle + SQLite"
+  required_specialties: ["docker", "next.js"]
+  budget_tokens: 50000
+  deadline: "2026-08-12"
+assigned_to: "hive-mx-2e8c1d"
+result:
+  pattern_received: true
+  pattern_slug: "mesh-nextjs-docker-mx2e"
+  quality_rating: 5
+  adopted: true
+cost:
+  tokens_used: 12000
+  reciprocity: "pattern_exchange"
+```
+
+### Mesh Privacy & Security Model — Phase 16
+
+```
+NEVER SHARED:
+  - Source code (only structure: file names, exports, interfaces)
+  - Project names or slugs
+  - Client information
+  - Business data (revenue, expenses, invoices)
+  - API keys, secrets, credentials
+  - Personal data
+
+SHARED (opt-in):
+  - Pattern structure (file names, export signatures, dependency lists)
+  - Pattern metadata (tags, stack, usage count, confidence score)
+  - Anti-patterns (full description, workaround, affected stack)
+  - Stack satisfaction benchmarks (anonymous aggregates)
+  - Usage notes and gotchas
+
+ANONYMIZATION:
+  - All project references replaced with generic identifiers
+  - Code content replaced with structural descriptions
+  - Timestamps randomized within a week range
+  - Peer identities are pseudonymous (public key based)
+```
+
+---
+
+## Phase 11-16 Tool Definitions
+
+### Self-Replication Tools (Phase 11)
+
+#### `hive_self_audit`
+Analyze Hive's own effectiveness and generate improvement proposals.
+
+```
+Input:
+  period?: string              — "last_week" | "last_month" | "all_time" (default: last_month)
+  focus?: string               — "unused_tools" | "slow_tools" | "error_patterns" | "gaps" | "all"
+
+Output:
+  {
+    period: { start: string, end: string },
+    total_calls: number,
+    tool_usage: [
+      { tool: string, calls: number, avg_duration_ms: number, 
+        used_pct: number, ignored_pct: number, error_pct: number }
+    ],
+    unused_tools: string[],
+    slow_tools: [
+      { tool: string, avg_ms: number, p95_ms: number }
+    ],
+    repeated_manual_patterns: [
+      { description: string, frequency: number, suggested_tool: string }
+    ],
+    proposals_generated: number,
+    health_score: number                     — 0-100 overall Hive effectiveness
+  }
+```
+
+**MCP Apps UI:** Dashboard with tool usage heatmap (rows = tools, columns = days, color = call frequency). Unused tools highlighted in red. Slow tools with flame icon. "Repeated patterns" section with "Create Tool" buttons. Overall health score as a gauge.
+
+#### `hive_propose_tool`
+Generate a detailed proposal for a new or modified tool.
+
+```
+Input:
+  type: "new_tool" | "refactor_tool" | "remove_tool" | "schema_change" | "ui_change"
+  target?: string              — existing tool name (for refactor/remove)
+  description?: string         — what should change and why (optional — auto-generates from telemetry)
+
+Output:
+  {
+    proposal_id: string,
+    type: string,
+    proposal: {
+      name: string,
+      description: string,
+      reasoning: string,
+      input_schema: object,
+      output: string,
+      implementation_plan: string[],
+      estimated_effort: string,
+      affected_tools: string[],
+      affected_ui: string[]
+    },
+    evidence: object
+  }
+```
+
+**MCP Apps UI:** Proposal card with full spec preview. Side-by-side "before/after" for refactors. Evidence section showing telemetry charts. "Approve", "Reject", "Modify" buttons.
+
+#### `hive_evolve`
+Execute an approved proposal — generate code, apply changes, create rollback point.
+
+```
+Input:
+  proposal_id: string
+  dry_run?: boolean
+
+Output:
+  {
+    evolution_id: string,
+    files_changed: string[],
+    rollback_version: string,
+    tests_passed: boolean,
+    status: "applied" | "dry_run"
+  }
+```
+
+**MCP Apps UI:** Diff view showing all file changes. "Apply" / "Rollback" buttons. Test results panel. Evolution history timeline.
+
+#### `hive_rollback_evolution`
+Roll back a specific evolution to its previous state.
+
+```
+Input:
+  evolution_id: string
+
+Output:
+  {
+    rolled_back: boolean,
+    files_restored: string[],
+    current_version: string
+  }
+```
+
+#### `hive_evolution_history`
+View the history of all self-modifications.
+
+```
+Input:
+  limit?: number               — default 20
+
+Output:
+  Evolution log entries with status, files changed, and outcomes
+```
+
+**MCP Apps UI:** Timeline visualization. Each evolution as a node with expand for details. Active in green, rolled-back in red.
+
+### Revenue Tools (Phase 12)
+
+#### `hive_revenue_dashboard`
+Full fleet revenue overview with trends and breakdowns.
+
+```
+Input:
+  period?: string              — "today" | "this_week" | "this_month" | "this_quarter" | "this_year"
+  compare_to?: string          — "previous_period" | "same_period_last_year"
+
+Output:
+  {
+    period: { start: string, end: string },
+    total_mrr: number,
+    total_arr: number,
+    total_customers: number,
+    mrr_change: number,
+    mrr_change_pct: number,
+    products: [
+      {
+        project: string,
+        mrr: number,
+        customers: number,
+        churn_rate: number,
+        ltv: number,
+        trend: string,
+        growth_rate: number,
+        plan_breakdown: Record<string, number>,
+        contribution_pct: number
+      }
+    ],
+    top_growing: string[],
+    needs_attention: [
+      { project: string, reason: string }
+    ],
+    revenue_by_day: Array<{ date: string, mrr: number }>
+  }
+```
+
+**MCP Apps UI:** Hero number: total MRR with trend arrow. Revenue chart (line graph, daily MRR). Product breakdown table sortable by any column. "Needs Attention" alerts. Contribution pie chart.
+
+#### `hive_pricing_analysis`
+Analyze pricing for a specific product and recommend changes.
+
+```
+Input:
+  project: string
+
+Output:
+  {
+    current_pricing: {
+      plans: Array<{ name: string, price: number, interval: string, customers: number }>,
+      average_revenue_per_user: number,
+      price_sensitivity_signals: string[]
+    },
+    recommendations: [
+      {
+        type: "raise_price" | "lower_price" | "add_tier" | "remove_tier" | "change_limits",
+        target: string,
+        current: string,
+        proposed: string,
+        reasoning: string,
+        estimated_impact: {
+          mrr_change: number,
+          customer_change: number,
+          confidence: "high" | "medium" | "low"
+        }
+      }
+    ],
+    competitor_context: string[],
+    similar_products_pricing: [
+      { project: string, price: number, customers: number }
+    ]
+  }
+```
+
+**MCP Apps UI:** Current pricing cards. Recommendations as action cards with "estimated impact" mini-charts. "Run Experiment" button.
+
+#### `hive_growth_signals`
+Detect which products are gaining/losing traction and why.
+
+```
+Input:
+  threshold?: number           — minimum growth_rate change to flag (default: 5%)
+
+Output:
+  {
+    accelerating: [
+      { project: string, growth_rate: number, signals: string[] }
+    ],
+    decelerating: [
+      { project: string, growth_rate: number, signals: string[] }
+    ],
+    stable: [
+      { project: string, growth_rate: number }
+    ],
+    recommendations: [
+      { project: string, action: string, reasoning: string, priority: "high" | "medium" | "low" }
+    ]
+  }
+```
+
+**MCP Apps UI:** Three-column layout: Accelerating (green), Decelerating (red), Stable (gray). Recommendations as actionable cards.
+
+#### `hive_run_experiment`
+Set up and manage an A/B test for pricing, landing pages, or feature flags.
+
+```
+Input:
+  project: string
+  type: "pricing" | "landing_page" | "feature_flag"
+  hypothesis: string
+  variants: Array<{ name: string, description: string, traffic_pct: number }>
+  duration_days: number
+
+Output:
+  {
+    experiment_id: string,
+    status: "created",
+    started: string,
+    ends: string,
+    tracking_instructions: string[]
+  }
+```
+
+**MCP Apps UI:** Experiment builder form. Live results dashboard with conversion bars, confidence meter, "Call Winner" button.
+
+#### `hive_financial_summary`
+Total business health across all revenue streams.
+
+```
+Input:
+  period?: string              — "this_month" | "this_quarter" | "this_year" | "all_time"
+
+Output:
+  {
+    revenue: { total: number, recurring: number, one_time: number },
+    expenses: { total: number, hosting: number, apis: number, domains: number, tools: number },
+    profit: number,
+    margin_pct: number,
+    runway_months: number,
+    revenue_per_product: Record<string, number>,
+    cost_per_product: Record<string, number>,
+    most_profitable: string,
+    least_profitable: string,
+    recommendations: string[]
+  }
+```
+
+**MCP Apps UI:** P&L summary card. Revenue vs expenses bar chart. Product profitability table. Runway meter.
+
+### Content & Marketing Tools (Phase 13)
+
+#### `hive_generate_launch`
+Generate a complete launch package for a product.
+
+```
+Input:
+  project: string
+  channels?: string[]          — "landing_page" | "readme" | "tweets" | "product_hunt" | "email" | "all"
+  tone?: string                — "technical" | "casual" | "professional"
+
+Output:
+  {
+    project: string,
+    assets_generated: string[],
+    landing_page: {
+      html: string,
+      sections: Array<{ type: string, content: string, source_component?: string }>
+    },
+    readme: string,
+    tweets: Array<{ type: string, posts: string[] }>,
+    product_hunt: { tagline: string, description: string, first_comment: string },
+    email_sequences: Record<string, Array<{ day: number, subject: string, body: string }>>,
+    changelog: string
+  }
+```
+
+**MCP Apps UI:** Tabbed preview: Landing Page, README, Tweets, Product Hunt, Emails. Each tab has "Edit", "Approve", "Publish" buttons. Source attribution badges.
+
+#### `hive_generate_content`
+Generate SEO content, tutorials, or documentation from the actual codebase.
+
+```
+Input:
+  project: string
+  type: "blog_post" | "tutorial" | "documentation" | "comparison" | "case_study"
+  topic?: string
+  target_keywords?: string[]
+
+Output:
+  {
+    title: string,
+    content: string,
+    meta: { description: string, keywords: string[], estimated_word_count: number, reading_time_minutes: number },
+    code_examples: Array<{ description: string, code: string, source_file: string }>,
+    internal_links: string[],
+    suggested_publish_date: string
+  }
+```
+
+**MCP Apps UI:** Full article preview. SEO panel. Code examples with "from: {source_file}" badges. "Publish to {CMS}" button.
+
+#### `hive_marketing_dashboard`
+Overview of all marketing content performance across products.
+
+```
+Input:
+  period?: string              — "this_week" | "this_month" | "this_quarter"
+  project?: string
+
+Output:
+  {
+    period: { start: string, end: string },
+    total_content_pieces: number,
+    total_impressions: number,
+    total_clicks: number,
+    total_conversions: number,
+    total_revenue_attributed: number,
+    best_performing: Array<{ content_id: string, project: string, type: string, metric: string, value: number }>,
+    underperforming: Array<{ content_id: string, project: string, type: string, issue: string }>,
+    content_gaps: Array<{ project: string, days_since_last_content: number, suggested_content: string[] }>,
+    messaging_insights: { top_converting_angles: string[], top_channels: string[] }
+  }
+```
+
+**MCP Apps UI:** Performance table with sparklines. Content gaps as alert cards with "Generate Now" buttons. Messaging insights section.
+
+#### `hive_draft_campaign`
+Create a multi-channel campaign from a single brief.
+
+```
+Input:
+  project: string
+  brief: string
+  channels: string[]           — "email" | "twitter" | "blog" | "landing_page"
+  duration_days?: number
+
+Output:
+  {
+    campaign_id: string,
+    brief: string,
+    timeline: Array<{ day: number, channel: string, content_type: string, content: string, scheduled_time?: string }>,
+    total_pieces: number,
+    estimated_reach: number,
+    tracking_setup: string[]
+  }
+```
+
+**MCP Apps UI:** Campaign timeline (Gantt-like). Content cards on timeline. "Schedule All" button.
+
+#### `hive_auto_changelog`
+Generate changelog entries from git history, decision log, and architecture changes.
+
+```
+Input:
+  project: string
+  since?: string               — date or git ref
+  format?: "keep-a-changelog" | "conventional" | "narrative"
+
+Output:
+  {
+    entries: Array<{
+      version: string,
+      date: string,
+      categories: { added: string[], changed: string[], fixed: string[], removed: string[] },
+      highlights: string,
+      source_commits: string[],
+      source_decisions: string[]
+    }>
+  }
+```
+
+**MCP Apps UI:** Changelog preview. Entries linked to source commits/decisions. "Publish" buttons.
+
+### Business Operations Tools (Phase 14)
+
+#### `hive_generate_invoice`
+Create an invoice from client and project context.
+
+```
+Input:
+  client: string
+  project?: string
+  line_items?: Array<{ description: string, quantity: number, rate: number }>
+  period?: string              — "this_month" | "last_month" | custom date range
+
+Output:
+  {
+    invoice_id: string,
+    client: string,
+    line_items: Array<{ description: string, quantity: number, rate: number, amount: number }>,
+    subtotal: number,
+    tax: number,
+    total: number,
+    pdf_path: string,
+    payment_link?: string,
+    status: "draft"
+  }
+```
+
+**MCP Apps UI:** Invoice preview. Line item editor. "Send" button (PDF + email). Payment status tracker.
+
+#### `hive_financial_report`
+Generate a tax-ready financial summary for a period.
+
+```
+Input:
+  period: "this_quarter" | "this_year" | "last_year" | "custom"
+  start?: string
+  end?: string
+  format?: "summary" | "detailed" | "tax_ready"
+
+Output:
+  {
+    period: { start: string, end: string },
+    revenue: {
+      total: number,
+      by_type: { recurring: number, one_time: number, consulting: number },
+      by_project: Record<string, number>,
+      by_client: Record<string, number>,
+      by_month: Array<{ month: string, amount: number }>
+    },
+    expenses: {
+      total: number,
+      by_category: Record<string, number>,
+      by_vendor: Record<string, number>,
+      by_month: Array<{ month: string, amount: number }>
+    },
+    profit: { net: number, margin_pct: number, by_month: Array<{ month: string, amount: number }> },
+    tax_estimates: {
+      estimated_liability: number,
+      quarterly_payment_due: number,
+      deductible_expenses: number,
+      notes: string[]
+    },
+    outstanding: {
+      invoices_unpaid: number,
+      amount_outstanding: number,
+      overdue: Array<{ invoice_id: string, client: string, amount: number, days_overdue: number }>
+    }
+  }
+```
+
+**MCP Apps UI:** P&L statement. Revenue/expense charts by month. Tax estimate card. Outstanding invoices alerts. "Export to CSV" / "Send to Accountant" buttons.
+
+#### `hive_generate_contract`
+Generate a contract from templates + business context.
+
+```
+Input:
+  type: "freelance" | "saas_terms" | "privacy_policy" | "terms_of_service" | "nda"
+  client?: string
+  project?: string
+  customizations?: Record<string, string>
+
+Output:
+  {
+    contract_id: string,
+    type: string,
+    content: string,
+    variables_used: Record<string, string>,
+    review_notes: string[],
+    pdf_path: string
+  }
+```
+
+**MCP Apps UI:** Contract preview with highlighted auto-filled variables. Review notes as callouts. "Download PDF" / "Send for Signature" buttons.
+
+#### `hive_compliance_scan`
+Check all products for legal/compliance gaps.
+
+```
+Input:
+  project?: string             — specific project, or scan all
+
+Output:
+  {
+    scanned: number,
+    issues: Array<{
+      project: string,
+      type: "missing_privacy_policy" | "outdated_terms" | "no_cookie_consent" | 
+            "missing_gdpr_controls" | "no_contact_info" | "missing_accessibility",
+      severity: "critical" | "warning" | "info",
+      description: string,
+      fix: string,
+      auto_fixable: boolean
+    }>,
+    compliant: string[],
+    last_scan: string
+  }
+```
+
+**MCP Apps UI:** Compliance grid: projects × categories. Green/red per cell. "Auto-Fix" buttons. Overall compliance score.
+
+#### `hive_track_expense`
+Log an expense and categorize it.
+
+```
+Input:
+  vendor: string
+  amount: number
+  category: "hosting" | "apis" | "domains" | "tools" | "hardware" | "travel" | "other"
+  project?: string
+  recurring?: boolean
+  note?: string
+
+Output:
+  { logged: true, monthly_total: number, category_total: number }
+```
+
+#### `hive_client_overview`
+View all clients with billing status.
+
+```
+Input:
+  status?: "active" | "inactive" | "all"
+
+Output:
+  {
+    clients: Array<{
+      name: string, slug: string, type: string,
+      active_projects: number, total_invoiced: number,
+      outstanding: number, overdue: number,
+      last_invoice: string, contract_status: "active" | "expired" | "none"
+    }>
+  }
+```
+
+**MCP Apps UI:** Client table with status indicators. Expand for details. "Create Invoice" button per client.
+
+### Knowledge Marketplace Tools (Phase 15)
+
+#### `hive_package_pattern`
+Bundle patterns into a distributable package.
+
+```
+Input:
+  patterns: string[]
+  name: string
+  description: string
+  pricing: { type: "one_time" | "subscription" | "pay_what_you_want" | "free", price?: number, currency?: string }
+  include_docs?: boolean
+  include_decision_guide?: boolean
+
+Output:
+  {
+    package_slug: string,
+    manifest: object,
+    files_included: number,
+    files_sanitized: number,
+    files_excluded: number,
+    preview: { description: string, file_tree: string[], pattern_names: string[], confidence_scores: Record<string, number> },
+    warnings: string[],
+    ready_to_publish: boolean
+  }
+```
+
+**MCP Apps UI:** Package builder wizard. File tree with sanitization indicators. Confidence scores. "Publish" button.
+
+#### `hive_package_stack`
+Bundle a full stack preset as a product.
+
+```
+Input:
+  stack: string
+  name: string
+  description: string
+  pricing: object
+  extras?: { include_patterns: boolean, include_example_project: boolean, include_docs: boolean }
+
+Output:
+  {
+    package_slug: string,
+    manifest: object,
+    stack_config: object,
+    patterns_included: string[],
+    example_project: { files: number, runs: boolean },
+    documentation: { setup_guide: string, architecture_overview: string, decision_rationale: string },
+    ready_to_publish: boolean
+  }
+```
+
+**MCP Apps UI:** Stack overview card. Included patterns gallery. Example project file tree. "Test Build" button.
+
+#### `hive_marketplace_dashboard`
+Overview of all marketplace listings and revenue.
+
+```
+Input:
+  period?: string
+
+Output:
+  {
+    total_packages: number,
+    total_downloads: number,
+    total_revenue: number,
+    packages: Array<{
+      slug: string, name: string, type: string, price: number,
+      downloads: number, revenue: number, rating: number,
+      trend: "growing" | "stable" | "declining", last_updated: string
+    }>,
+    top_performing: string[],
+    needs_update: Array<{ slug: string, reason: string }>,
+    revenue_by_month: Array<{ month: string, amount: number }>,
+    customer_insights: { top_tags_requested: string[], frequent_questions: string[], suggested_new_packages: string[] }
+  }
+```
+
+**MCP Apps UI:** Revenue chart. Package table. "Needs Update" alerts. Customer insights panel. "Create New Package" button.
+
+#### `hive_export_knowledge`
+Selective knowledge export for clients, collaborators, or custom use.
+
+```
+Input:
+  scope: { projects?: string[], patterns?: string[], stacks?: string[], tags?: string[], all?: boolean }
+  format: "hive_import" | "markdown" | "json" | "zip"
+  sanitize: boolean
+  recipient?: "client" | "collaborator" | "public"
+
+Output:
+  {
+    exported: { patterns: number, stacks: number, decisions: number, dependencies: number },
+    file_path: string,
+    sanitization_report: { secrets_removed: number, files_excluded: number, files_modified: number }
+  }
+```
+
+**MCP Apps UI:** Export wizard: select scope → choose format → review sanitization → export.
+
+### Hive Mesh Tools (Phase 16)
+
+#### `hive_mesh_connect`
+Join the Hive mesh network or manage your connection.
+
+```
+Input:
+  action: "join" | "update_profile" | "status" | "disconnect"
+  display_name?: string
+  share_preferences?: {
+    share_patterns: boolean,
+    share_anti_patterns: boolean,
+    share_benchmarks: boolean,
+    accept_delegations: boolean,
+    auto_merge_anti_patterns: boolean
+  }
+
+Output:
+  {
+    peer_id: string,
+    status: "connected" | "disconnected",
+    peers_discovered: number,
+    your_reputation: number,
+    specialties_detected: string[],
+    settings: object
+  }
+```
+
+**MCP Apps UI:** Connection status card. Specialty badges. Toggle switches for sharing. Peer count.
+
+#### `hive_mesh_share`
+Publish patterns, anti-patterns, or benchmarks to the mesh.
+
+```
+Input:
+  type: "pattern" | "anti_pattern" | "benchmark"
+  source: string
+  anonymize?: boolean
+
+Output:
+  {
+    shared_slug: string,
+    type: string,
+    anonymized: boolean,
+    sanitization_report: { fields_removed: string[], references_stripped: number, code_excluded: boolean },
+    mesh_id: string,
+    initial_visibility: number
+  }
+```
+
+**MCP Apps UI:** Share wizard with anonymization preview. "Code is never shared" assurance badge.
+
+#### `hive_mesh_insights`
+Get collective intelligence from the mesh relevant to your current work.
+
+```
+Input:
+  context?: { project?: string, tags?: string[], type?: "patterns" | "anti_patterns" | "benchmarks" | "all" }
+
+Output:
+  {
+    relevant_patterns: Array<{
+      mesh_slug: string, description: string, tags: string[],
+      adoptions: number, rating: number, source_peer: string,
+      compatible_with_your_stack: boolean
+    }>,
+    anti_patterns_to_watch: Array<{
+      name: string, description: string, affected_stack: string[],
+      reporters: number, severity: string, applies_to_you: boolean
+    }>,
+    stack_benchmarks: Array<{
+      stack: string, builders_using: number, satisfaction_score: number,
+      common_migration_targets: string[], common_pain_points: string[], common_praise: string[]
+    }>,
+    recommendations: string[]
+  }
+```
+
+**MCP Apps UI:** Three-tab layout: Patterns (gallery with "Adopt" buttons), Anti-Patterns (warnings with "affects you" badges), Benchmarks (stack comparison table).
+
+#### `hive_mesh_delegate`
+Delegate a task to a specialized Hive instance via A2A.
+
+```
+Input:
+  description: string
+  required_specialties: string[]
+  budget_tokens?: number
+  deadline?: string
+  prefer_peer?: string
+
+Output:
+  {
+    delegation_id: string,
+    status: "searching" | "assigned" | "rejected",
+    assigned_to?: { peer_id: string, display_name: string, reputation: number, specialties: string[], estimated_completion: string },
+    alternatives?: Array<{ peer_id: string, reputation: number, specialties: string[] }>
+  }
+```
+
+**MCP Apps UI:** Delegation request form. Progress tracker. Result review with "Adopt Result" / "Reject" and quality rating.
+
+#### `hive_mesh_reputation`
+View your reputation and contribution history on the mesh.
+
+```
+Input:
+  peer_id?: string
+
+Output:
+  {
+    peer_id: string,
+    display_name: string,
+    reputation_score: number,
+    rank: "newcomer" | "contributor" | "expert" | "authority",
+    specialties: string[],
+    contributions: {
+      patterns_shared: number, adoptions_of_your_patterns: number,
+      anti_patterns_contributed: number, delegations_completed: number,
+      delegations_failed: number, average_rating_received: number
+    },
+    history: Array<{ date: string, event: string, reputation_change: number }>
+  }
+```
+
+**MCP Apps UI:** Reputation profile card with score gauge and rank badge. Activity timeline.
 
 ---
 
@@ -1881,40 +2017,45 @@ By project 10: Claude has your entire playbook. Every library you use, every pat
 - `hive_plan_build`, `hive_execute_step`, `hive_review_checkpoint` + visual checkpoint UI
 - `hive_resume_build`, `hive_rollback_step`
 
-### Phase 7 — Product Lifecycle (7 tools, 1 type file, per-project YAML additions)
-- `hive_deploy` — execute configured deploy, record result + deploy history UI
-- `hive_check_health` — HTTP/command health checks + traffic-light dashboard UI
-- `hive_get_errors` — retrieve/filter errors + error list UI with severity indicators
-- `hive_get_usage` — usage stats with trends + usage chart UI
-- `hive_add_to_backlog` — log bug/improvement/idea/maintenance + backlog form UI
-- `hive_get_backlog` — filterable backlog query + kanban backlog UI
-- `hive_archive_project` — set status to archived, preserve knowledge + archive confirmation UI
-- New per-project files: `deploy.yaml`, `health.yaml`, `errors.yaml`, `usage.yaml`, `backlog.yaml`
+### Phase 11 — Self-Replicating Hive
+- Telemetry layer (instrument all tool calls)
+- `hive_self_audit`, `hive_propose_tool`, `hive_evolve` + proposal/diff UIs
+- `hive_rollback_evolution`, `hive_evolution_history` + timeline UI
+- Versioned rollback snapshots
 
-### Phase 8 — Fleet Management (5 tools, 1 type file, fleet/ directory)
-- `hive_fleet_status` — scan all projects, aggregate overview + fleet dashboard UI
-- `hive_fleet_scan_deps` — find outdated deps across fleet + vulnerability table UI
-- `hive_fleet_update_pattern` — propagate pattern changes (dry-run default) + diff preview UI
-- `hive_fleet_costs` — cost breakdown by project/category/provider + cost chart UI
-- `hive_whats_next` — priority-scored recommendations + priority queue UI
-- New directory: `~/.hive/fleet/` with `topology.yaml`, `costs.yaml`, `priorities.yaml`
+### Phase 12 — Revenue Engine
+- Polar.sh integration (sync revenue data)
+- Revenue snapshot storage + experiment tracking
+- `hive_revenue_dashboard` + revenue chart UI, `hive_pricing_analysis`
+- `hive_growth_signals`, `hive_run_experiment` + experiment builder UI
+- `hive_financial_summary` + P&L UI
 
-### Phase 9 — Self-Improving Hive (4 tools, 1 type file, retrospectives/ + metrics/)
-- `hive_retrospective` — analyze build accuracy, pattern reuse, lessons + retrospective scorecard UI
-- `hive_knowledge_gaps` — find unregistered patterns/deps/antipatterns + gap list UI
-- `hive_pattern_health` — usage rate, modification rate, staleness scoring + pattern health dashboard UI
-- `hive_estimate` — predict effort from similar past projects + estimate breakdown UI
-- New directories: `~/.hive/retrospectives/`, `~/.hive/metrics/`
+### Phase 13 — Content & Marketing Engine
+- Marketing storage (playbooks, calendars, campaigns, assets)
+- Content performance tracking with revenue attribution
+- `hive_generate_launch` + tabbed preview UI, `hive_generate_content` + article preview UI
+- `hive_marketing_dashboard`, `hive_draft_campaign` + timeline UI
+- `hive_auto_changelog`
 
-### Phase 10 — Sovereign Builder OS (7 tools, 1 type file, revenue/ + maintenance/)
-- `hive_idea_pipeline` — auto-score all ideas against capabilities + pipeline board UI
-- `hive_track_revenue` — add/query revenue per project + revenue chart UI
-- `hive_fleet_revenue` — cross-fleet revenue vs cost dashboard + P&L dashboard UI
-- `hive_maintenance_run` — execute maintenance rules (dry-run default) + maintenance log UI
-- `hive_build_from_description` — NL description → full build pipeline + pipeline wizard UI
-- `hive_export_knowledge` — export portable knowledge bundle + export preview UI
-- `hive_autonomy_status` — control autonomy sessions + session control panel UI
-- New directories: `~/.hive/revenue/`, `~/.hive/maintenance/`
+### Phase 14 — Business Operations
+- Business entity, client, invoice, expense, contract storage
+- `hive_generate_invoice` + invoice preview UI, `hive_financial_report` + P&L UI
+- `hive_generate_contract` + contract preview UI, `hive_compliance_scan` + compliance grid UI
+- `hive_track_expense`, `hive_client_overview` + client table UI
+
+### Phase 15 — Knowledge Marketplace
+- Package manifest + export rules + sanitization pipeline
+- `hive_package_pattern` + package builder wizard, `hive_package_stack`
+- `hive_marketplace_dashboard` + revenue/package table UI
+- `hive_export_knowledge` + export wizard UI
+
+### Phase 16 — Hive Mesh (Network Effect)
+- Mesh identity, peer discovery, reputation system
+- Privacy/anonymization layer (code never shared, structure only)
+- `hive_mesh_connect`, `hive_mesh_share` + share wizard UI
+- `hive_mesh_insights` + three-tab insights UI, `hive_mesh_delegate` + delegation UI
+- `hive_mesh_reputation` + reputation profile UI
+- A2A delegation protocol
 
 ---
 

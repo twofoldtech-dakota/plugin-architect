@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -40,13 +41,17 @@ async function createFileStructure(
 }
 
 export function registerScaffoldProject(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_scaffold_project",
-    "Scaffold a full project from a stack preset — creates directory structure, package.json, pattern files, and a Hive project entry.",
     {
-      name: z.string().describe("Project name"),
-      stack: z.string().describe("Stack preset slug (e.g., 'next-drizzle-sqlite')"),
-      output_path: z.string().describe("Absolute path where the project directory will be created"),
+      description: "Scaffold a full project from a stack preset — creates directory structure, package.json, pattern files, and a Hive project entry.",
+      _meta: { ui: { resourceUri: "ui://hive/scaffold-preview" } },
+      inputSchema: {
+        name: z.string().describe("Project name"),
+        stack: z.string().describe("Stack preset slug (e.g., 'next-drizzle-sqlite')"),
+        output_path: z.string().describe("Absolute path where the project directory will be created"),
+      },
     },
     async ({ name, stack, output_path }) => {
       // Read stack preset

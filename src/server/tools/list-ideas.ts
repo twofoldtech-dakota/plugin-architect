@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -6,14 +7,18 @@ import { HIVE_DIRS, readYaml } from "../storage/index.js";
 import type { Idea } from "../types/idea.js";
 
 export function registerListIdeas(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_list_ideas",
-    "List all captured ideas with their status and verdict",
     {
-      status: z
-        .enum(["raw", "evaluated", "approved", "rejected", "parked"])
-        .optional()
-        .describe("Filter by status"),
+      description: "List all captured ideas with their status and verdict",
+      _meta: { ui: { resourceUri: "ui://hive/idea-kanban" } },
+      inputSchema: {
+        status: z
+          .enum(["raw", "evaluated", "approved", "rejected", "parked"])
+          .optional()
+          .describe("Filter by status"),
+      },
     },
     async ({ status }) => {
       let files: string[];

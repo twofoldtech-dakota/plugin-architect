@@ -1,16 +1,21 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { HIVE_DIRS, readYaml } from "../storage/index.js";
 import type { Pattern, PatternIndex } from "../types/pattern.js";
 
 export function registerFindPatterns(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_find_patterns",
-    "Search for relevant patterns by query (tags or keywords) and optional stack filter",
     {
-      query: z.string().describe("Natural language query or tags to search for"),
-      stack: z.array(z.string()).optional().describe("Filter by stack (e.g., ['typescript', 'node'])"),
+      description: "Search for relevant patterns by query (tags or keywords) and optional stack filter",
+      _meta: { ui: { resourceUri: "ui://hive/pattern-gallery" } },
+      inputSchema: {
+        query: z.string().describe("Natural language query or tags to search for"),
+        stack: z.array(z.string()).optional().describe("Filter by stack (e.g., ['typescript', 'node'])"),
+      },
     },
     async ({ query, stack }) => {
       const indexPath = join(HIVE_DIRS.patterns, "index.yaml");

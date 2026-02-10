@@ -112,161 +112,216 @@ Tools:
 ## Phase 7 — Product Lifecycle
 **Goal:** Hive doesn't stop at "it works." It helps you ship, monitor, and iterate.
 
-- **Deploy pipeline** — Hive knows how to deploy each project (Vercel, Docker, VPS, etc.) and can trigger deploys. Uses the "recipe pattern" — you configure the deploy command in YAML, Hive just runs it.
-- **Health checks** — after deploy, verify the thing is actually running. Hit endpoints, check responses. Traffic-light status (green/yellow/red).
-- **Error tracking integration** — pipe errors from your running products back into Hive. Pull-based: Hive runs your configured error source command on demand.
-- **Usage signals** — basic analytics/logging with trend computation (up/down/flat over configurable periods).
-- **Iteration backlog** — Hive maintains a typed backlog per project (bug/improvement/idea/maintenance). Fed by errors, usage, fleet scans, and manual input.
-- **Kill/archive criteria** — archive projects while preserving all generated knowledge (patterns, decisions, deps stay in registry).
+- **Deploy pipeline** — Hive knows how to deploy each project (Vercel, Docker, VPS, etc.) and can trigger deploys.
+- **Health checks** — after deploy, verify the thing is actually running. Hit endpoints, check responses.
+- **Error tracking integration** — pipe errors from your running products back into Hive. "Project X is throwing 500s on /api/auth."
+- **Usage signals** — basic analytics/logging so you know if anyone (including you) is using the thing.
+- **Iteration backlog** — Hive maintains a list of improvements, bugs, and ideas per project. Fed by errors, usage, and your notes.
+- **Kill/archive criteria** — you define when a project is dead. Hive flags projects with no usage, no commits, and suggests archiving.
 
 Tools:
-- `hive_deploy` — execute configured deploy command, record result in deploy history (dry-run by default)
-- `hive_check_health` — run HTTP/command health checks, return traffic-light status per check
-- `hive_get_errors` — retrieve/filter recent errors by severity, date, resolution status
-- `hive_get_usage` — usage stats with trend computation over configurable periods
-- `hive_add_to_backlog` — log a bug, improvement, idea, or maintenance item with priority
-- `hive_get_backlog` — filterable backlog query by type, priority, and status
-- `hive_archive_project` — set status to archived, log decision, preserve all knowledge
+- `hive_deploy` — deploy a project to its configured target
+- `hive_check_health` — is project X alive and responding?
+- `hive_get_errors` — recent errors from a running project
+- `hive_get_usage` — basic usage stats
+- `hive_add_to_backlog` — log an improvement or bug
+- `hive_get_backlog` — what needs attention?
+- `hive_archive_project` — mark a project as done/dead, preserve knowledge
 
-Data models introduced:
-- `deploy.yaml` — deploy target config + command + history per project
-- `health.yaml` — health check definitions + result history per project
-- `errors.yaml` — error log with severity, count, resolution tracking per project
-- `usage.yaml` — usage entries with trend computation per project
-- `backlog.yaml` — typed/prioritized backlog items per project
-
-UI components:
-- Deploy history timeline with status indicators
-- Health check traffic-light dashboard
-- Error list with severity badges and resolution tracking
-- Usage trend chart with period selector
-- Backlog kanban board with type/priority filters
-- Archive confirmation card showing preserved knowledge
-
-**Milestone:** You have a dashboard of all your products — what's live, what's healthy, what needs work. Every deploy is recorded, every error is tracked, every improvement is queued.
+**Milestone:** You have a dashboard (even if it's just CLI output) of all your products — what's live, what's healthy, what needs work.
 
 ---
 
 ## Phase 8 — Fleet Management
 **Goal:** Manage all your running products as a unified fleet.
 
-- **Fleet overview** — all projects, their status, health, last deploy, last error, usage trends. Computed on-demand by scanning project directories (no separate fleet database).
-- **Dependency fleet scan** — cross-reference registered dependencies with projects to find outdated or vulnerable packages fleet-wide.
-- **Shared infrastructure** — topology tracking: which projects share hosts, domains, providers. Stored in `fleet/topology.yaml`.
-- **Cross-project pattern propagation** — update a pattern in Hive, preview the diff across all projects that use it, then apply (dry-run by default).
-- **Resource tracking** — cost registry by project, category, and provider. Tracks hosting, domains, APIs, databases — everything with a price tag.
-- **Priority scoring** — weighted recommendations based on critical errors, backlog urgency, usage trends, revenue, and maintenance needs. Filterable by available time.
+- **Fleet overview** — all projects, their status, health, last deploy, last error, usage trends.
+- **Dependency fleet scan** — "drizzle-orm has a security update. These 4 projects use it." One command to update all.
+- **Shared infrastructure** — some projects share a VPS, a domain, a database. Hive knows the topology.
+- **Cross-project migrations** — update a pattern in Hive, propagate the change to all projects that use it.
+- **Resource tracking** — what are you paying for? Domains, hosting, APIs. Which projects are costing you money vs generating it?
+- **Priority scoring** — based on usage, errors, revenue, and your backlog, Hive suggests which project to work on next.
 
 Tools:
-- `hive_fleet_status` — scan all projects, aggregate health/errors/usage/costs into fleet overview
-- `hive_fleet_scan_deps` — find outdated/vulnerable dependencies across the entire fleet
-- `hive_fleet_update_pattern` — propagate a pattern change to all projects that use it (dry-run by default)
-- `hive_fleet_costs` — cost breakdown grouped by project, category, or provider, with revenue comparison
-- `hive_whats_next` — priority-scored recommendations for what to work on, filtered by available time
+- `hive_fleet_status` — overview of all live projects
+- `hive_fleet_scan_deps` — find outdated/vulnerable deps across all projects
+- `hive_fleet_update_pattern` — propagate a pattern change across projects
+- `hive_fleet_costs` — what you're spending and where
+- `hive_whats_next` — "what should I work on today?"
 
-Data models introduced:
-- `fleet/topology.yaml` — infrastructure topology (hosts, providers, domains, project mappings)
-- `fleet/costs.yaml` — resource cost registry with per-project attribution
-- `fleet/priorities.yaml` — fleet-level priority scores (computed by `hive_whats_next`)
-
-UI components:
-- Fleet dashboard with per-project health/status/cost cards
-- Vulnerability table with affected projects
-- Pattern diff preview across fleet
-- Cost breakdown charts (by project, category, provider)
-- Priority queue with action cards and effort estimates
-
-**Milestone:** You manage 15+ live products without losing track of any of them. One command tells you what to work on next.
+**Milestone:** You manage 15+ live products without losing track of any of them.
 
 ---
 
 ## Phase 9 — Self-Improving Hive
 **Goal:** Hive learns from its own performance.
 
-- **Build retrospectives** — after each project, analyze planning accuracy (planned vs actual components), pattern reuse rate, knowledge usage, and lessons learned. Scored 1-5 across speed, quality, and knowledge growth.
-- **Tool effectiveness tracking** — which Hive tools are you actually using? Track usage in `metrics/tool-usage.yaml`. Auto-suggest improvements.
-- **Pattern quality scoring** — track usage rate, modification rate after use, and staleness. Patterns that work perfectly score "high confidence." Patterns frequently modified after use score lower and get flagged for revision.
-- **Effort prediction** — compare new project descriptions against past projects by similarity. Factor in pattern coverage, stack familiarity, and scope complexity. Track estimate accuracy over time.
-- **Knowledge gaps** — scan all projects for repeated code/decisions that aren't captured as patterns. Find dependencies used but not registered. Identify potential anti-patterns from decision history.
+- **Build retrospectives** — after each project, Hive auto-analyzes: what was fast, what was slow, where did Claude hallucinate, which patterns worked?
+- **Tool effectiveness tracking** — which Hive tools are you actually using? Which are unused? Auto-suggest improvements.
+- **Pattern quality scoring** — patterns that need edits after use score lower. Patterns that work perfectly score higher. Auto-promote best patterns.
+- **Prediction models** — "projects like this typically take you 3 sessions to build." Get better at estimating effort.
+- **Knowledge gaps** — Hive identifies what's missing. "You've built 5 auth systems but never registered the pattern. Want to snapshot it?"
 
 Tools:
-- `hive_retrospective` — analyze a completed build: planning accuracy, pattern reuse, lessons, scored 1-5
-- `hive_knowledge_gaps` — find unregistered patterns, unregistered dependencies, and potential anti-patterns
-- `hive_pattern_health` — score patterns by usage rate, modification rate, and staleness (fresh/aging/stale)
-- `hive_estimate` — predict effort based on similar past projects, pattern coverage, and stack familiarity
+- `hive_retrospective` — analyze a completed project build
+- `hive_knowledge_gaps` — what should you register that you haven't?
+- `hive_pattern_health` — which patterns need updating?
+- `hive_estimate` — how long will this project take based on history?
 
-Data models introduced:
-- `retrospectives/{project}.yaml` — post-build analysis with scores and lessons
-- `metrics/tool-usage.yaml` — which Hive tools are used and how often
-- `metrics/pattern-health.yaml` — pattern quality metrics (usage, modifications, staleness)
-- `metrics/estimates.yaml` — historical estimate vs actual data for accuracy tracking
-
-UI components:
-- Retrospective scorecard with radar chart (speed, quality, knowledge growth)
-- Knowledge gap list with one-click "register pattern" actions
-- Pattern health dashboard with confidence indicators and staleness warnings
-- Estimate breakdown showing similar projects, confidence level, and contributing factors
-
-**Milestone:** Hive is actively improving itself and telling you how to improve it further. Each build makes the next one faster.
+**Milestone:** Hive is actively improving itself and telling you how to improve it further.
 
 ---
 
 ## Phase 10 — Sovereign Builder OS
 **Goal:** Hive is your complete operating system for building and running products.
 
-- **Idea pipeline** — auto-score all raw ideas against current capabilities, pattern coverage, and estimated effort. Prioritize what to build next based on feasibility and impact.
-- **Revenue tracking** — per-project revenue entries (subscription, one-time, usage-based). Track MRR, total customers, trends. Compare against costs for net profitability.
-- **Fleet revenue dashboard** — cross-fleet P&L: total MRR vs total costs, profitable vs unprofitable projects, customer counts.
-- **Automated maintenance** — define maintenance rules (security scans, staleness checks, cert expiry) as YAML recipes. Execute on demand (dry-run by default). Results feed into project backlogs.
-- **Build from natural language** — "I want a CLI tool that does X" → orchestrate the full pipeline: capture idea → evaluate → promote → plan build → execute steps. This is composition of existing tools, not new capability.
-- **Knowledge export** — export patterns, dependencies, decisions, stacks, and anti-patterns as a portable YAML or JSON bundle. Importable into another Hive instance.
-- **Full autonomy mode** — control and monitor autonomous build sessions. View status, approve/reject pending actions, pause/resume sessions. Risk levels on pending approvals.
-
-Tools:
-- `hive_idea_pipeline` — auto-score all ideas against current capabilities and patterns, rank by build-readiness
-- `hive_track_revenue` — add or query revenue data per project (MRR, customers, trends)
-- `hive_fleet_revenue` — cross-fleet revenue vs cost dashboard with per-project P&L
-- `hive_maintenance_run` — execute maintenance rules from schedule (dry-run by default)
-- `hive_build_from_description` — natural language → orchestrated idea→evaluate→promote→plan→build pipeline
-- `hive_export_knowledge` — export selected knowledge as portable YAML/JSON bundle
-- `hive_autonomy_status` — view/control full-autonomy sessions (status, approve, reject, pause, resume)
-
-Data models introduced:
-- `revenue/{project}.yaml` — per-project revenue entries with model type and summary
-- `maintenance/schedule.yaml` — maintenance rules with schedules and scope
-- `maintenance/log.yaml` — maintenance action history and results
-
-UI components:
-- Idea pipeline board with capability scores and priority rankings
-- Revenue chart per project with MRR trend
-- Fleet P&L dashboard with profitable/unprofitable indicators
-- Maintenance log with rule status and action history
-- Build pipeline wizard showing orchestration steps and approval gates
-- Knowledge export preview with category counts
-- Autonomy session control panel with risk-level badges on pending approvals
+- **Idea pipeline** — capture ideas, auto-score them against your skills/patterns/available time, prioritize.
+- **Revenue tracking** — which products are making money? Which should be killed? What's your total MRR across the fleet?
+- **Automated maintenance** — Hive can auto-apply security patches, dependency updates, and pattern improvements to the fleet without you touching anything.
+- **Build from natural language** — "I want a CLI tool that does X" → Hive plans, builds, tests, deploys, and monitors it. You just approve checkpoints.
+- **Knowledge export** — your accumulated patterns, decisions, and anti-patterns become a transferable asset. Could feed into a team's Hive instance if you ever choose to.
+- **Full autonomy mode** — Hive handles the entire build-ship-monitor-iterate loop. You focus on ideas and high-level decisions.
 
 **Milestone:** You are a one-person product studio running 20+ products, shipping new ones weekly, with Hive handling everything below the idea level.
 
 ---
 
+## Phase 11 — Self-Replicating Hive
+**Goal:** Hive improves its own code, tools, and UIs autonomously.
+
+- Telemetry layer — every tool call logged with timing, outcome, and whether you used the result
+- `hive_self_audit` — analyze tool usage, find unused/slow tools, detect repeated manual patterns, generate improvement proposals
+- `hive_propose_tool` — generate specs for new or modified tools based on telemetry evidence
+- `hive_evolve` — execute an approved proposal with rollback safety + dry run mode
+- `hive_rollback_evolution` — revert a self-modification to previous state
+- `hive_evolution_history` — timeline of all self-modifications with outcomes
+- Versioned snapshots for rollback, approval checkpoint UI for all changes
+
+**Key constraint:** Hive never modifies itself without your approval. It proposes, you review and merge — like a developer submitting PRs to its own repo.
+
+**Milestone:** Hive submits PRs to its own repo. You review and merge. Hive at month 12 is fundamentally different from Hive at month 1.
+
+---
+
+## Phase 12 — Revenue Engine
+**Goal:** Turn shipped products into optimized revenue streams.
+
+- Polar.sh integration — syncs revenue data across all products via API
+- `hive_revenue_dashboard` — fleet-wide MRR/ARR/churn/LTV with trends + comparison periods
+- `hive_pricing_analysis` — per-product pricing recommendations based on usage patterns and plan breakdown
+- `hive_growth_signals` — detect accelerating/decelerating products with signal explanations
+- `hive_run_experiment` — set up A/B tests for pricing, landing pages, feature flags with statistical confidence tracking
+- `hive_financial_summary` — total business P&L: revenue vs expenses, profit margin, runway, per-product profitability
+
+**Compound effect:** Revenue data feeds back into Phase 0 (idea evaluation includes revenue potential) and Phase 8 (fleet priority scoring weighted by revenue).
+
+**Milestone:** You know your exact MRR across 20+ products and Hive tells you where to focus for maximum revenue impact.
+
+---
+
+## Phase 13 — Content & Marketing Engine
+**Goal:** Every product gets autonomous marketing without you writing copy.
+
+- Code-aware marketing — Hive reads your codebase to generate accurate feature descriptions, tutorials, changelogs
+- `hive_generate_launch` — full launch package: landing page, README, tweet thread, Product Hunt copy, email sequences
+- `hive_generate_content` — SEO content, tutorials, docs generated from actual codebase with real code examples
+- `hive_marketing_dashboard` — content performance across products with revenue attribution, content gaps, messaging insights
+- `hive_draft_campaign` — multi-channel campaign from a single brief with timeline and scheduling
+- `hive_auto_changelog` — changelog from git history + decision log + architecture changes
+- Content performance tracking feeds back into which messaging works
+
+**Compound effect:** Products ship with marketing built in. Phase 12 revenue grows because products actually get discovered.
+
+**Milestone:** You ship a product and its landing page, launch copy, and first week of social content are generated before you announce it.
+
+---
+
+## Phase 14 — Business Operations
+**Goal:** Hive handles the business side so you stay in builder mode.
+
+- `hive_generate_invoice` — auto-generate invoices from client/project context, PDF output, Polar payment link
+- `hive_financial_report` — tax-ready P&L: revenue by type/project/client, categorized expenses, quarterly tax estimates, outstanding invoices
+- `hive_generate_contract` — contracts from templates (freelance, SaaS terms, privacy policy, NDA) pre-populated from business context
+- `hive_compliance_scan` — check all products for compliance gaps (privacy policy, terms, cookie consent, GDPR) with auto-fix for common issues
+- `hive_track_expense` — log expenses by vendor, category, and project
+- `hive_client_overview` — all clients with billing status, outstanding amounts, contract expiration
+- Business entity, client, invoice, expense, and contract storage all in `~/.hive/business/`
+
+**Compound effect:** Zero admin overhead. Every hour you'd spend on business operations goes back into building.
+
+**Milestone:** Tax season takes 30 minutes because Hive has been tracking everything all year.
+
+---
+
+## Phase 15 — Knowledge Marketplace
+**Goal:** Monetize your compounded knowledge.
+
+- `hive_package_pattern` — bundle verified patterns into distributable packages with sanitization (secrets stripped, code excluded by rules)
+- `hive_package_stack` — bundle full stack presets as products with example project, docs, and decision rationale
+- `hive_marketplace_dashboard` — sales, downloads, ratings, customer insights, suggested new packages
+- `hive_export_knowledge` — selective knowledge export for clients or collaborators with format options and sanitization report
+- Export rules system — minimum confidence threshold, minimum usage count, always-exclude patterns for secrets
+- Two distribution models: direct sales via Polar.sh, and Hive Marketplace (shared platform, feeds into Phase 16)
+
+**Compound effect:** Your building activity directly generates sellable assets. Every product you build creates marketplace inventory as a byproduct.
+
+**Milestone:** Passive revenue from knowledge assets you created as a side effect of building products.
+
+---
+
+## Phase 16 — Network Effect (Hive Mesh)
+**Goal:** Connect with other builders' Hive instances for collective intelligence.
+
+- Federated peer-to-peer network — each Hive stays sovereign, only structural knowledge shared (never source code)
+- `hive_mesh_connect` — join the mesh, manage sharing preferences, discover peers
+- `hive_mesh_share` — publish anonymized patterns, anti-patterns, or benchmarks to the mesh
+- `hive_mesh_insights` — get collective intelligence relevant to your stack: popular patterns, anti-patterns to watch, stack benchmarks
+- `hive_mesh_delegate` — delegate tasks to specialized Hive instances via A2A protocol with budget and deadline
+- `hive_mesh_reputation` — reputation scoring based on contribution quality, adoption rates, delegation success
+- Privacy model: code never shared (only structure: file names, exports, interfaces), all project refs anonymized, peer identities pseudonymous
+
+**Compound effect:** Knowledge compounds not just across YOUR projects, but across ALL Hive users' projects. Network effects make everyone's Hive smarter.
+
+**Milestone:** Your Hive benefits from the collective intelligence of thousands of builders, while contributing your own expertise back.
+
+---
+
+## Beyond — The Open Frontier
+
+Hive never stops evolving. Future capability layers emerge from what you're building and what the ecosystem enables:
+
+- **Hardware/IoT fleet** — Hive manages physical devices, firmware updates, sensor data alongside software products.
+- **Multi-modal building** — voice-first building sessions, visual architecture editing, AR workspace.
+- **Sovereign AI** — Hive runs local models for sensitive operations, reducing dependence on cloud APIs.
+- **Hive-to-Hive economy** — Hive instances autonomously trade knowledge, patterns, and compute with each other.
+
+The principle stays the same: **every phase compounds on every previous phase.** Nothing is throwaway. Everything feeds forward.
+
+---
+
 ## Timeline Reality Check
 
-| Phase | Tools | Effort | Depends On |
-|-------|-------|--------|------------|
-| 0 — Discovery | 4 | 1 session | Nothing |
-| 1 — Foundation | 7 | 1-2 sessions | Nothing |
-| 2 — Validation | 5 | 1-2 sessions | Phase 1 |
-| 3 — Acceleration | 4 | 2-3 sessions | Phase 1 |
-| 4 — Intelligence | 5 | 2-3 sessions | Phase 2+3 |
-| 5 — Cross-Project | 4 | 1-2 sessions | Phase 4 |
-| 6 — Autonomous Agent | 5 | 3-5 sessions | Phase 4 |
-| 7 — Product Lifecycle | 7 | 3-5 sessions | Phase 6 |
-| 8 — Fleet Management | 5 | 2-3 sessions | Phase 7 |
-| 9 — Self-Improving | 4 | 2-3 sessions | Phase 5+8 |
-| 10 — Sovereign OS | 7 | 3-5 sessions | Phase 9 |
-| **Total** | **57** | | |
+| Phase | Effort | Depends On | Compound Value |
+|-------|--------|------------|----------------|
+| 0 — Discovery | 1 session | Nothing | Idea quality ↑ |
+| 1 — Foundation | 1-2 sessions | Nothing | Build speed ↑ |
+| 2 — Validation | 1-2 sessions | Phase 1 | Hallucination ↓ |
+| 3 — Acceleration | 2-3 sessions | Phase 1 | Setup time ↓↓ |
+| 4 — Intelligence | 2-3 sessions | Phase 2+3 | All phases smarter |
+| 5 — Cross-Project | 1-2 sessions | Phase 4 | Knowledge compounds |
+| 6 — Autonomous Agent | 3-5 sessions | Phase 4 | Hands-off building |
+| 7 — Product Lifecycle | 3-5 sessions | Phase 6 | Ship → monitor loop |
+| 8 — Fleet Management | 2-3 sessions | Phase 7 | Scale to 20+ products |
+| 9 — Self-Improving | 2-3 sessions | Phase 5+8 | Hive improves itself |
+| 10 — Sovereign OS | Ongoing | Phase 9 | Full autonomy |
+| 11 — Self-Replicating | 2-3 sessions | Phase 9+10 | Exponential improvement |
+| 12 — Revenue Engine | 2-3 sessions | Phase 7+8 | Money optimized |
+| 13 — Content/Marketing | 2-3 sessions | Phase 12 | Products get discovered |
+| 14 — Business Ops | 2-3 sessions | Phase 12 | Zero admin overhead |
+| 15 — Knowledge Marketplace | 3-5 sessions | Phase 5+12 | Passive revenue |
+| 16 — Hive Mesh | 5+ sessions | Phase 11+15 | Network effects |
 
-Phases 1-4 are the foundation you build once. Phases 5-10 are the compound interest — each one makes the previous phases more powerful.
+Phases 0-4 are the foundation. Phases 5-10 are the compound interest. Phases 11+ are the flywheel — each one feeds all the others.
 
 ---
 
@@ -285,6 +340,8 @@ Phase 0:   You + Hive = interactive scorecard → "is this worth building?"
 Phase 3:   You + Claude Code + Hive = minutes of assembly, visual progress tracking
 Phase 6:   You + Hive = "build this" → agents coordinate → working prototype
 Phase 10:  You + Hive = "I have an idea" → live, monitored product
+Phase 13:  You + Hive = idea → product → marketing → revenue (autonomous)
+Phase 16:  You + Hive Mesh = collective intelligence across a network of builders
 ```
 
 Hive is the bridge between having ideas and having products.

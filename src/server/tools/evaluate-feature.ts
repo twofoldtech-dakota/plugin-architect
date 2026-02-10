@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { HIVE_DIRS, readYaml } from "../storage/index.js";
@@ -157,13 +158,17 @@ function deriveVerdict(
 }
 
 export function registerEvaluateFeature(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_evaluate_feature",
-    "Evaluate whether a proposed feature is worth building. Analyzes alignment with project goals, effort vs. impact, and returns a recommendation.",
     {
-      project: z.string().describe("Project slug"),
-      feature: z.string().describe("Feature description (natural language)"),
-      reasoning: z.string().optional().describe("Why you think this feature is needed"),
+      description: "Evaluate whether a proposed feature is worth building. Analyzes alignment with project goals, effort vs. impact, and returns a recommendation.",
+      _meta: { ui: { resourceUri: "ui://hive/feature-evaluator" } },
+      inputSchema: {
+        project: z.string().describe("Project slug"),
+        feature: z.string().describe("Feature description (natural language)"),
+        reasoning: z.string().optional().describe("Why you think this feature is needed"),
+      },
     },
     async ({ project, feature, reasoning }) => {
       let architecture: Architecture;

@@ -1,15 +1,20 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { HIVE_DIRS, readYaml } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 
 export function registerGetArchitecture(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_get_architecture",
-    "Read the current architecture doc and decisions log for a project. Call this at the start of every coding session.",
     {
-      project: z.string().describe("Project slug"),
+      description: "Read the current architecture doc and decisions log for a project. Call this at the start of every coding session.",
+      _meta: { ui: { resourceUri: "ui://hive/architecture-viewer" } },
+      inputSchema: {
+        project: z.string().describe("Project slug"),
+      },
     },
     async ({ project }) => {
       const projectDir = join(HIVE_DIRS.projects, project);

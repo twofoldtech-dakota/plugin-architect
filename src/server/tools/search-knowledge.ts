@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
@@ -187,11 +188,15 @@ async function searchArchitectures(terms: string[]): Promise<SearchResult[]> {
 }
 
 export function registerSearchKnowledge(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_search_knowledge",
-    "Search across all Hive knowledge — patterns, dependencies, decisions, and architectures. Returns ranked results.",
     {
-      query: z.string().describe("Search query (keywords, tags, or natural language)"),
+      description: "Search across all Hive knowledge — patterns, dependencies, decisions, and architectures. Returns ranked results.",
+      _meta: { ui: { resourceUri: "ui://hive/search-results" } },
+      inputSchema: {
+        query: z.string().describe("Search query (keywords, tags, or natural language)"),
+      },
     },
     async ({ query }) => {
       const terms = query
