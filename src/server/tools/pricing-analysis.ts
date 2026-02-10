@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { RevenueConfig, RevenueSnapshot, PricingRecommendation } from "../types/fleet.js";
 
 async function safeRead<T>(path: string): Promise<T | null> {
@@ -22,7 +22,7 @@ export function registerPricingAnalysis(server: McpServer): void {
     },
     async ({ project }) => {
       // Read project revenue
-      const revenuePath = join(HIVE_DIRS.revenue, `${project}.yaml`);
+      const revenuePath = join(HIVE_DIRS.revenue, `${safeName(project)}.yaml`);
       const revenue = await safeRead<RevenueConfig>(revenuePath);
 
       if (!revenue || revenue.entries.length === 0) {

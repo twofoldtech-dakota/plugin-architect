@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { BuildPlan } from "../types/build-plan.js";
 
 export function registerResumeBuild(server: McpServer): void {
@@ -13,7 +13,7 @@ export function registerResumeBuild(server: McpServer): void {
       project: z.string().describe("Project slug"),
     },
     async ({ project }) => {
-      const planPath = join(HIVE_DIRS.projects, project, "build-plan.yaml");
+      const planPath = join(HIVE_DIRS.projects, safeName(project), "build-plan.yaml");
 
       let plan: BuildPlan;
       try {

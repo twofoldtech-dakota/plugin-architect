@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { DependencyMeta, DependencySurface } from "../types/dependency.js";
 
 export function registerCheckDependency(server: McpServer): void {
@@ -12,7 +12,7 @@ export function registerCheckDependency(server: McpServer): void {
       name: z.string().describe("Package name (e.g., 'drizzle-orm')"),
     },
     async ({ name }) => {
-      const depDir = join(HIVE_DIRS.dependencies, name);
+      const depDir = join(HIVE_DIRS.dependencies, safeName(name));
 
       let meta: DependencyMeta;
       let surface: DependencySurface;

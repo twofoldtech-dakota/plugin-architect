@@ -1,6 +1,7 @@
 export interface Idea {
   name: string;
   slug: string;
+  description: string;
   problem: string;
   audience: string;
   proposed_solution: string;

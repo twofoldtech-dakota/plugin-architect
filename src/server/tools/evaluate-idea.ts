@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Idea, Evaluation } from "../types/idea.js";
 
 export function registerEvaluateIdea(server: McpServer): void {
@@ -37,7 +37,7 @@ export function registerEvaluateIdea(server: McpServer): void {
       },
     },
     async ({ idea: slug, feasibility, competitive, scope, verdict, reasoning }) => {
-      const filePath = join(HIVE_DIRS.ideas, `${slug}.yaml`);
+      const filePath = join(HIVE_DIRS.ideas, `${safeName(slug)}.yaml`);
 
       let ideaData: Idea;
       try {

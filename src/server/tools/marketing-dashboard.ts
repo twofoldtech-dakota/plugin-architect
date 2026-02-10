@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { ContentPerformance, ContentPerformanceEntry } from "../types/marketing.js";
 
 function parsePeriodDays(period: string): number {

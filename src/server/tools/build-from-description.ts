@@ -35,8 +35,9 @@ export function registerBuildFromDescription(server: McpServer): void {
 
       // Step 1: Capture idea
       const idea: Idea = {
-        name: description.slice(0, 80),
+        name: description.split(/\s+/).slice(0, 8).join(" "),
         slug,
+        description,
         problem: description,
         audience: "developer",
         proposed_solution: description,

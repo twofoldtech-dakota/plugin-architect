@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import { appendDecision } from "./log-decision.js";
 
@@ -33,7 +33,7 @@ export function registerUpdateArchitecture(server: McpServer): void {
       reason: z.string().optional().describe("Why this changed (auto-logged to decisions)"),
     },
     async ({ project, updates, reason }) => {
-      const projectDir = join(HIVE_DIRS.projects, project);
+      const projectDir = join(HIVE_DIRS.projects, safeName(project));
       const archPath = join(projectDir, "architecture.yaml");
 
       let architecture: Architecture;

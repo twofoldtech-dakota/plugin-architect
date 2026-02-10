@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { BuildPlan, BuildPhase, BuildTask } from "../types/build-plan.js";
 
@@ -97,7 +97,7 @@ export function registerPlanBuild(server: McpServer): void {
       description: z.string().describe("Product description — what you want to build"),
     },
     async ({ project, description }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
 
       let architecture: Architecture;
       try {
@@ -135,7 +135,7 @@ export function registerPlanBuild(server: McpServer): void {
         session_id: randomUUID(),
       };
 
-      const planPath = join(HIVE_DIRS.projects, project, "build-plan.yaml");
+      const planPath = join(HIVE_DIRS.projects, safeName(project), "build-plan.yaml");
       await writeYaml(planPath, plan);
 
       // Summarize for the caller

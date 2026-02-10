@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Pattern, PatternIndex } from "../types/pattern.js";
 import type { Architecture } from "../types/architecture.js";
 
@@ -35,7 +35,7 @@ export function registerSuggestPatterns(server: McpServer): void {
 
       if (project && stackTerms.length === 0) {
         try {
-          const arch = await readYaml<Architecture>(join(HIVE_DIRS.projects, project, "architecture.yaml"));
+          const arch = await readYaml<Architecture>(join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"));
           // Collect stack values (e.g., { runtime: "node", framework: "next" } → ["node", "next"])
           stackTerms = Object.values(arch.stack).map((v) => v.toLowerCase());
           // Also add component types as hints

@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { BusinessEntity, ClientProfile, ContractStore, GeneratedContract } from "../types/business.js";
 import type { Architecture } from "../types/architecture.js";
 
@@ -241,7 +241,7 @@ export function registerGenerateContract(server: McpServer): void {
 
       // Client profile
       if (client) {
-        const clientPath = join(HIVE_DIRS.businessClients, `${client}.yaml`);
+        const clientPath = join(HIVE_DIRS.businessClients, `${safeName(client)}.yaml`);
         const clientProfile = await safeRead<ClientProfile>(clientPath);
         if (clientProfile) {
           variables["client_name"] = clientProfile.name;
@@ -259,7 +259,7 @@ export function registerGenerateContract(server: McpServer): void {
 
       // Project context
       if (project) {
-        const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+        const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
         const arch = await safeRead<Architecture>(archPath);
         if (arch) {
           variables["product_name"] = arch.project;

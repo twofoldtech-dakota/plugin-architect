@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { unlink, writeFile } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { BuildPlan } from "../types/build-plan.js";
 
 export function registerRollbackStep(server: McpServer): void {
@@ -15,7 +15,7 @@ export function registerRollbackStep(server: McpServer): void {
       project_path: z.string().optional().describe("Absolute path to the project codebase (needed to delete created files)"),
     },
     async ({ project, task_id, project_path }) => {
-      const planPath = join(HIVE_DIRS.projects, project, "build-plan.yaml");
+      const planPath = join(HIVE_DIRS.projects, safeName(project), "build-plan.yaml");
 
       let plan: BuildPlan;
       try {

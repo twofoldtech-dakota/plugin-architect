@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { PatternIndex } from "../types/pattern.js";
 
@@ -173,7 +173,7 @@ export function registerEvaluateFeature(server: McpServer): void {
     async ({ project, feature, reasoning }) => {
       let architecture: Architecture;
       try {
-        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, project, "architecture.yaml"));
+        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"));
       } catch {
         return {
           content: [{ type: "text" as const, text: `Project "${project}" not found.` }],

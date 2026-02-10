@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { ClientProfile, Invoice, InvoiceLineItem, InvoiceStore } from "../types/business.js";
 
 async function safeRead<T>(path: string): Promise<T | null> {
@@ -37,7 +37,7 @@ export function registerGenerateInvoice(server: McpServer): void {
     },
     async ({ client, project, line_items, period }) => {
       // Read client profile
-      const clientPath = join(HIVE_DIRS.businessClients, `${client}.yaml`);
+      const clientPath = join(HIVE_DIRS.businessClients, `${safeName(client)}.yaml`);
       const clientProfile = await safeRead<ClientProfile>(clientPath);
 
       if (!clientProfile) {

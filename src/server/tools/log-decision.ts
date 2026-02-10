@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Decision, DecisionLog } from "../types/architecture.js";
 
 /**
@@ -12,7 +12,8 @@ export function appendDecision(
   log: DecisionLog,
   fields: { component: string; decision: string; reasoning: string; alternatives?: string[]; revisit_when?: string },
 ): Decision {
-  const nextId = String(log.decisions.length + 1).padStart(3, "0");
+  const maxId = log.decisions.reduce((max, d) => Math.max(max, parseInt(d.id, 10) || 0), 0);
+  const nextId = String(maxId + 1).padStart(3, "0");
   const now = new Date().toISOString().split("T")[0];
 
   const entry: Decision = {
@@ -42,7 +43,7 @@ export function registerLogDecision(server: McpServer): void {
       revisit_when: z.string().optional().describe("When to revisit this decision"),
     },
     async ({ project, component, decision, reasoning, alternatives, revisit_when }) => {
-      const decisionsPath = join(HIVE_DIRS.projects, project, "decisions.yaml");
+      const decisionsPath = join(HIVE_DIRS.projects, safeName(project), "decisions.yaml");
 
       let log: DecisionLog;
       try {

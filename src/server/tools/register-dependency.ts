@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, writeYaml, safeName } from "../storage/index.js";
 import type { DependencyMeta, DependencySurface } from "../types/dependency.js";
 
 export function registerRegisterDependency(server: McpServer): void {
@@ -33,7 +33,7 @@ export function registerRegisterDependency(server: McpServer): void {
       source: z.string().optional().describe("Documentation URL"),
     },
     async ({ name, version, surface, source }) => {
-      const depDir = join(HIVE_DIRS.dependencies, name);
+      const depDir = join(HIVE_DIRS.dependencies, safeName(name));
       const now = new Date().toISOString().split("T")[0];
 
       const meta: DependencyMeta = {

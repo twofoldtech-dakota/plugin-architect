@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { ComplianceAudit, ComplianceIssue } from "../types/business.js";
 import type { Architecture } from "../types/architecture.js";
 
@@ -215,7 +215,7 @@ export function registerComplianceScan(server: McpServer): void {
 
       // Save audit results
       if (project) {
-        const auditPath = join(HIVE_DIRS.businessCompliance, project, "audit.yaml");
+        const auditPath = join(HIVE_DIRS.businessCompliance, safeName(project), "audit.yaml");
         const audit: ComplianceAudit = {
           last_scan: now,
           scanned: 1,

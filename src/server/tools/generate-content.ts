@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import type { ContentPiece } from "../types/marketing.js";
 
@@ -19,7 +19,7 @@ export function registerGenerateContent(server: McpServer): void {
       target_keywords: z.array(z.string()).optional().describe("Target SEO keywords"),
     },
     async ({ project, type, topic, target_keywords }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
 
       let architecture: Architecture;
       try {
@@ -33,7 +33,7 @@ export function registerGenerateContent(server: McpServer): void {
 
       let decisions: DecisionLog = { decisions: [] };
       try {
-        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, project, "decisions.yaml"));
+        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, safeName(project), "decisions.yaml"));
       } catch {
         // No decisions
       }
@@ -156,7 +156,7 @@ export function registerGenerateContent(server: McpServer): void {
       const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
       // Generate content ID
-      const contentDir = join(HIVE_DIRS.marketing, project);
+      const contentDir = join(HIVE_DIRS.marketing, safeName(project));
       let existingCount = 0;
       try {
         const files = await readdir(contentDir);

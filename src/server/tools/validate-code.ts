@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { DependencySurface } from "../types/dependency.js";
 
@@ -109,7 +109,7 @@ export function registerValidateCode(server: McpServer): void {
       // Read project architecture for stack context
       let architecture: Architecture | null = null;
       try {
-        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, project, "architecture.yaml"));
+        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"));
       } catch {
         issues.push({
           severity: "warning",

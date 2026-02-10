@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { UsageConfig, UsageEntry, UsageTrend } from "../types/lifecycle.js";
 
 const execAsync = promisify(exec);
@@ -49,7 +49,7 @@ export function registerGetUsage(server: McpServer): void {
       period: z.enum(["7d", "30d", "90d"]).optional().default("7d").describe("Time period to analyze (default: 7d)"),
     },
     async ({ project, period }) => {
-      const usagePath = join(HIVE_DIRS.projects, project, "usage.yaml");
+      const usagePath = join(HIVE_DIRS.projects, safeName(project), "usage.yaml");
 
       let config: UsageConfig;
       try {
