@@ -6,7 +6,8 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   registerAppResource,
@@ -30,7 +31,7 @@ export type ViewName = (typeof VIEWS)[number];
 /** Resolve the dist directory relative to this compiled file. */
 function distDir(): string {
   // In compiled form: dist/server/ui-resources.js → dist/ui/views
-  return join(import.meta.dirname, "..", "ui", "views");
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "ui", "views");
 }
 
 /**
