@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Architecture, ApiRegistry } from "../types/architecture.js";
 
 export function registerValidateAgainstSpec(server: McpServer): void {
@@ -14,7 +14,7 @@ export function registerValidateAgainstSpec(server: McpServer): void {
       files: z.array(z.string()).optional().describe("File paths that will be created or modified"),
     },
     async ({ project, action, files }) => {
-      const projectDir = join(HIVE_DIRS.projects, project);
+      const projectDir = join(HIVE_DIRS.projects, safeName(project));
 
       let architecture: Architecture;
       try {

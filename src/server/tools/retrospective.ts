@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import type { Pattern, PatternIndex } from "../types/pattern.js";
 import type { BuildPlan } from "../types/build-plan.js";
@@ -24,7 +24,7 @@ export function registerRetrospective(server: McpServer): void {
       project: z.string().describe("Project slug"),
     },
     async ({ project }) => {
-      const projDir = join(HIVE_DIRS.projects, project);
+      const projDir = join(HIVE_DIRS.projects, safeName(project));
 
       // Read architecture (required)
       let architecture: Architecture;
@@ -206,7 +206,7 @@ export function registerRetrospective(server: McpServer): void {
       };
 
       // Save retrospective
-      await writeYaml(join(HIVE_DIRS.retrospectives, `${project}.yaml`), retrospective);
+      await writeYaml(join(HIVE_DIRS.retrospectives, `${safeName(project)}.yaml`), retrospective);
 
       return {
         content: [

@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { Pattern, PatternIndex } from "../types/pattern.js";
 
@@ -55,7 +55,7 @@ export function registerAddFeature(server: McpServer): void {
       let architecture: Architecture;
       try {
         architecture = await readYaml<Architecture>(
-          join(HIVE_DIRS.projects, project, "architecture.yaml"),
+          join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"),
         );
       } catch {
         return {

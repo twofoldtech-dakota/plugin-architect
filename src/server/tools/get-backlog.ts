@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { BacklogConfig } from "../types/lifecycle.js";
 
 export function registerGetBacklog(server: McpServer): void {
@@ -15,7 +15,7 @@ export function registerGetBacklog(server: McpServer): void {
       status: z.enum(["open", "in_progress", "done", "wont_fix"]).optional().default("open").describe("Filter by status (default: open)"),
     },
     async ({ project, type, priority, status }) => {
-      const backlogPath = join(HIVE_DIRS.projects, project, "backlog.yaml");
+      const backlogPath = join(HIVE_DIRS.projects, safeName(project), "backlog.yaml");
 
       let config: BacklogConfig;
       try {

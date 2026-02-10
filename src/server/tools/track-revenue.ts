@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { RevenueConfig, RevenueEntry } from "../types/fleet.js";
 
 function computeRevenueSummary(entries: RevenueEntry[]): RevenueConfig["summary"] {
@@ -67,7 +67,7 @@ export function registerTrackRevenue(server: McpServer): void {
         .describe("Time period for query (default: all)"),
     },
     async ({ project, action, entry, period }) => {
-      const revenuePath = join(HIVE_DIRS.revenue, `${project}.yaml`);
+      const revenuePath = join(HIVE_DIRS.revenue, `${safeName(project)}.yaml`);
 
       let config: RevenueConfig;
       try {

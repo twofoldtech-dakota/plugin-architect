@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { ErrorsConfig, ErrorEntry } from "../types/lifecycle.js";
 
 const execAsync = promisify(exec);
@@ -19,7 +19,7 @@ export function registerGetErrors(server: McpServer): void {
       resolved: z.boolean().optional().describe("Filter by resolution status (true=resolved, false=unresolved)"),
     },
     async ({ project, severity, since, resolved }) => {
-      const errorsPath = join(HIVE_DIRS.projects, project, "errors.yaml");
+      const errorsPath = join(HIVE_DIRS.projects, safeName(project), "errors.yaml");
 
       let config: ErrorsConfig;
       try {

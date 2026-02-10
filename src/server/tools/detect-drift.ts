@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join, relative } from "node:path";
 import { readdir, stat } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 
 interface DriftReport {
@@ -78,7 +78,7 @@ export function registerDetectDrift(server: McpServer): void {
     async ({ project, project_path }) => {
       let architecture: Architecture;
       try {
-        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, project, "architecture.yaml"));
+        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"));
       } catch {
         return {
           content: [{ type: "text" as const, text: `Project "${project}" not found.` }],

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { HealthConfig, HealthCheck, HealthCheckResult, HealthResult } from "../types/lifecycle.js";
 
 const execAsync = promisify(exec);
@@ -97,7 +97,7 @@ export function registerCheckHealth(server: McpServer): void {
       project: z.string().describe("Project slug"),
     },
     async ({ project }) => {
-      const healthPath = join(HIVE_DIRS.projects, project, "health.yaml");
+      const healthPath = join(HIVE_DIRS.projects, safeName(project), "health.yaml");
 
       let config: HealthConfig;
       try {

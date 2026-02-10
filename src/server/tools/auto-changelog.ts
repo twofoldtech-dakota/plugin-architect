@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import type { ChangelogEntry } from "../types/marketing.js";
 
@@ -23,7 +23,7 @@ export function registerAutoChangelog(server: McpServer): void {
         .describe('Changelog format (default: "keep-a-changelog")'),
     },
     async ({ project, since, format }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
 
       let architecture: Architecture;
       try {
@@ -37,7 +37,7 @@ export function registerAutoChangelog(server: McpServer): void {
 
       let decisions: DecisionLog = { decisions: [] };
       try {
-        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, project, "decisions.yaml"));
+        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, safeName(project), "decisions.yaml"));
       } catch {
         // No decisions
       }
@@ -153,7 +153,7 @@ export function registerAutoChangelog(server: McpServer): void {
       }
 
       // Save changelog
-      const changelogPath = join(HIVE_DIRS.marketing, project, "changelog.yaml");
+      const changelogPath = join(HIVE_DIRS.marketing, safeName(project), "changelog.yaml");
       let existingEntries: ChangelogEntry[] = [];
       try {
         const existing = await readYaml<{ entries: ChangelogEntry[] }>(changelogPath);

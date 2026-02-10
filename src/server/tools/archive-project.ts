@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import { appendDecision } from "./log-decision.js";
 
@@ -15,8 +15,8 @@ export function registerArchiveProject(server: McpServer): void {
       reason: z.string().optional().describe("Reason for archiving"),
     },
     async ({ project, reason }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
-      const decisionsPath = join(HIVE_DIRS.projects, project, "decisions.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
+      const decisionsPath = join(HIVE_DIRS.projects, safeName(project), "decisions.yaml");
 
       let architecture: Architecture;
       try {

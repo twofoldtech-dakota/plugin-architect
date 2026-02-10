@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { CampaignConfig, CampaignPiece } from "../types/marketing.js";
 
@@ -19,7 +19,7 @@ export function registerDraftCampaign(server: McpServer): void {
       duration_days: z.number().optional().default(7).describe("Campaign duration in days (default: 7)"),
     },
     async ({ project, brief, channels, duration_days }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
 
       let architecture: Architecture;
       try {
@@ -68,7 +68,7 @@ export function registerDraftCampaign(server: McpServer): void {
       }
 
       // Generate campaign ID
-      const campaignsDir = join(HIVE_DIRS.marketing, project, "campaigns");
+      const campaignsDir = join(HIVE_DIRS.marketing, safeName(project), "campaigns");
       let existingCount = 0;
       try {
         const files = await readdir(campaignsDir);

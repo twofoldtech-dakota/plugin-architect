@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture, DecisionLog } from "../types/architecture.js";
 import type { LaunchPlaybook, LaunchAsset } from "../types/marketing.js";
 
@@ -22,7 +22,7 @@ export function registerGenerateLaunch(server: McpServer): void {
         .describe('Tone of generated content (default: "professional")'),
     },
     async ({ project, channels, tone }) => {
-      const archPath = join(HIVE_DIRS.projects, project, "architecture.yaml");
+      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
 
       let architecture: Architecture;
       try {
@@ -36,7 +36,7 @@ export function registerGenerateLaunch(server: McpServer): void {
 
       let decisions: DecisionLog = { decisions: [] };
       try {
-        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, project, "decisions.yaml"));
+        decisions = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, safeName(project), "decisions.yaml"));
       } catch {
         // No decisions yet
       }
@@ -186,7 +186,7 @@ MIT`;
       }
 
       // Save playbook
-      const playbookDir = join(HIVE_DIRS.marketing, project);
+      const playbookDir = join(HIVE_DIRS.marketing, safeName(project));
       const playbook: LaunchPlaybook = {
         project,
         tone,

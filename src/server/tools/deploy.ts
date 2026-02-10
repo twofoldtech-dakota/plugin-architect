@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { DeployConfig, DeployRecord } from "../types/lifecycle.js";
 
 const execAsync = promisify(exec);
@@ -18,7 +18,7 @@ export function registerDeploy(server: McpServer): void {
       notes: z.string().optional().describe("Optional deploy notes"),
     },
     async ({ project, dry_run, notes }) => {
-      const deployPath = join(HIVE_DIRS.projects, project, "deploy.yaml");
+      const deployPath = join(HIVE_DIRS.projects, safeName(project), "deploy.yaml");
 
       let config: DeployConfig;
       try {

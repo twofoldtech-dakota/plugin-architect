@@ -3,7 +3,7 @@ import { z } from "zod";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { MeshIdentity, MeshPeer, MeshDelegation } from "../types/mesh.js";
 
 function generateDelegationId(): string {
@@ -84,7 +84,7 @@ export function registerMeshDelegate(server: McpServer): void {
         if (!assignedPeer) {
           // Try to load preferred peer directly
           try {
-            const preferred = await readYaml<MeshPeer>(join(HIVE_DIRS.meshPeers, `${prefer_peer}.yaml`));
+            const preferred = await readYaml<MeshPeer>(join(HIVE_DIRS.meshPeers, `${safeName(prefer_peer)}.yaml`));
             assignedPeer = preferred;
           } catch {
             // Preferred peer not found — fall through to best match

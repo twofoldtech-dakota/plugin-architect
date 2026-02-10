@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml } from "../storage/index.js";
+import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
 import type { BuildPlan, BuildTask, FileChange } from "../types/build-plan.js";
 
@@ -45,7 +45,7 @@ export function registerExecuteStep(server: McpServer): void {
       project_path: z.string().optional().describe("Absolute path to the project codebase (needed to snapshot file contents for rollback)"),
     },
     async ({ project, task_id, outcome, error, files_changed, project_path }) => {
-      const planPath = join(HIVE_DIRS.projects, project, "build-plan.yaml");
+      const planPath = join(HIVE_DIRS.projects, safeName(project), "build-plan.yaml");
 
       let plan: BuildPlan;
       try {
@@ -169,7 +169,7 @@ export function registerExecuteStep(server: McpServer): void {
       // Read architecture for context
       let architecture: Architecture | null = null;
       try {
-        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, project, "architecture.yaml"));
+        architecture = await readYaml<Architecture>(join(HIVE_DIRS.projects, safeName(project), "architecture.yaml"));
       } catch {
         // Architecture is optional context
       }

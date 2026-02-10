@@ -10,19 +10,22 @@ export function registerCaptureIdea(server: McpServer): void {
     "Capture a raw idea and structure it into an evaluable concept. Saves to ~/.hive/ideas/{slug}.yaml",
     {
       description: z.string().describe("Raw brain dump of the idea"),
+      name: z.string().optional().describe("Short name for the idea (used as slug). Defaults to first few words of description."),
       problem: z.string().optional().describe("What problem does this solve?"),
       audience: z.string().optional().describe("Who is this for?"),
       proposed_solution: z.string().optional().describe("Proposed solution approach"),
       assumptions: z.array(z.string()).optional().describe("Things that must be true for this to work"),
       open_questions: z.array(z.string()).optional().describe("Things you haven't figured out yet"),
     },
-    async ({ description, problem, audience, proposed_solution, assumptions, open_questions }) => {
-      const slug = slugify(description);
+    async ({ description, name, problem, audience, proposed_solution, assumptions, open_questions }) => {
+      const shortName = name ?? description.split(/\s+/).slice(0, 8).join(" ");
+      const slug = slugify(shortName);
       const now = new Date().toISOString().split("T")[0];
 
       const idea: Idea = {
-        name: description,
+        name: shortName,
         slug,
+        description,
         problem: problem ?? "",
         audience: audience ?? "",
         proposed_solution: proposed_solution ?? "",
