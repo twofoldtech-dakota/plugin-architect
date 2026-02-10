@@ -1,0 +1,34 @@
+{
+  "idea": {
+    "name": "Recipe Remix",
+    "slug": "recipe-remix",
+    "problem": "Home cooks struggle to adapt recipes for dietary restrictions without losing flavor",
+    "audience": "Health-conscious home cooks aged 25-45",
+    "status": "evaluated"
+  },
+  "evaluation": {
+    "feasibility": {
+      "score": 4,
+      "has_patterns": true,
+      "known_stack": true,
+      "estimated_sessions": 6,
+      "unknowns": [
+        "Nutritional data API pricing",
+        "Recipe parsing accuracy for unstructured formats"
+      ]
+    },
+    "competitive": {
+      "exists_already": true,
+      "differentiator": "AI-powered substitution engine that maintains flavor profile, not just nutritional equivalence",
+      "references": ["Paprika", "Mealime", "Whisk"]
+    },
+    "scope": {
+      "mvp_definition": "Paste a recipe URL, select dietary restriction, get adapted recipe with substitution explanations",
+      "mvp_components": ["Recipe parser", "Substitution engine", "Web UI"],
+      "deferred": ["Meal planning", "Grocery list", "Social sharing", "Mobile app"],
+      "full_vision": "A personal cooking assistant that learns your taste preferences and dietary needs, automatically adapting any recipe you find online"
+    },
+    "verdict": "build",
+    "reasoning": "Strong problem-solution fit with a clear differentiator. Known stack and existing patterns reduce risk. The MVP is tight and achievable in ~6 sessions."
+  }
+}

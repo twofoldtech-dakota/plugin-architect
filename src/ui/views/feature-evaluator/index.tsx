@@ -3,6 +3,7 @@ import { useHiveApp } from "../../shared/hooks";
 import {
   Card,
   Badge,
+  Button,
   Tag,
   ScoreDots,
   QuadrantChart,
@@ -338,8 +339,44 @@ function RecommendationBanner({
 
 // ── App ────────────────────────────────────────────────────
 
+function ActionBar({
+  feature,
+  verdict,
+  sendMessage,
+}: {
+  feature: string;
+  verdict: string;
+  sendMessage: (text: string) => Promise<void>;
+}) {
+  return (
+    <div
+      className="hive-flex hive-gap-sm hive-items-center hive-flex-wrap"
+      style={{
+        padding: "var(--hive-space-md) 0",
+        borderTop: "1px solid var(--hive-border)",
+        marginTop: "var(--hive-space-lg)",
+      }}
+    >
+      <Button
+        label="Accept Recommendation"
+        variant="primary"
+        onClick={() => sendMessage(`Accepted the recommendation to ${verdict} the feature: ${feature}`)}
+      />
+      <Button
+        label="Override: Build Anyway"
+        onClick={() => sendMessage(`Override: Build the feature "${feature}" anyway despite the recommendation to ${verdict}`)}
+      />
+      <Button
+        label="Override: Cut"
+        variant="danger"
+        onClick={() => sendMessage(`Override: Cut the feature "${feature}" from the project`)}
+      />
+    </div>
+  );
+}
+
 function FeatureEvaluatorApp() {
-  const { data, isLoading, error } =
+  const { data, isLoading, error, sendMessage } =
     useHiveApp<FeatureEvaluationData>("feature-evaluator");
 
   if (isLoading) return <LoadingState message="Evaluating feature..." />;
@@ -357,6 +394,12 @@ function FeatureEvaluatorApp() {
         <PatternBoost patterns={data.matching_patterns} />
         <TradeoffsSection tradeoffs={data.tradeoffs} />
       </div>
+
+      <ActionBar
+        feature={data.feature}
+        verdict={data.recommendation.verdict}
+        sendMessage={sendMessage}
+      />
     </div>
   );
 }

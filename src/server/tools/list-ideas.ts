@@ -43,7 +43,10 @@ export function registerListIdeas(server: McpServer): void {
         slug: string;
         status: string;
         problem: string;
+        audience?: string;
         verdict?: string;
+        feasibility_score?: number;
+        estimated_sessions?: number;
         created: string;
       }> = [];
 
@@ -56,7 +59,10 @@ export function registerListIdeas(server: McpServer): void {
             slug: idea.slug,
             status: idea.status,
             problem: idea.problem,
+            audience: idea.audience,
             verdict: idea.evaluation?.verdict,
+            feasibility_score: idea.evaluation?.feasibility?.score,
+            estimated_sessions: idea.evaluation?.feasibility?.estimated_sessions,
             created: idea.created,
           });
         } catch {

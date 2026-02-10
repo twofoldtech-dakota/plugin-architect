@@ -68,25 +68,106 @@ function StackBanner({ stack }: { stack: Record<string, string> }) {
 
 // ── ComponentsSection ───────────────────────────────────────
 
-function ComponentCard({ component }: { component: Component }) {
+function ComponentCard({
+  component,
+  isSelected,
+  onClick,
+}: {
+  component: Component;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
   return (
     <Card className="arch-component-card">
-      <div className="hive-flex hive-items-center hive-gap-sm">
-        <strong>{component.name}</strong>
-        <Badge label={component.type} variant="info" />
+      <div
+        style={{ cursor: "pointer" }}
+        onClick={onClick}
+      >
+        <div className="hive-flex hive-items-center hive-gap-sm">
+          <strong>{component.name}</strong>
+          <Badge label={component.type} variant="info" />
+        </div>
+        <p className="hive-text-muted hive-text-sm hive-mt-sm">
+          {component.description}
+        </p>
+        <div className="hive-flex hive-gap-md hive-mt-sm hive-text-sm hive-text-subtle">
+          <span>{component.files.length} file{component.files.length !== 1 ? "s" : ""}</span>
+          <span>{component.dependencies.length} dep{component.dependencies.length !== 1 ? "s" : ""}</span>
+        </div>
       </div>
-      <p className="hive-text-muted hive-text-sm hive-mt-sm">
-        {component.description}
-      </p>
-      <div className="hive-flex hive-gap-md hive-mt-sm hive-text-sm hive-text-subtle">
-        <span>{component.files.length} file{component.files.length !== 1 ? "s" : ""}</span>
-        <span>{component.dependencies.length} dep{component.dependencies.length !== 1 ? "s" : ""}</span>
-      </div>
+      {isSelected && (
+        <div
+          style={{
+            marginTop: "var(--hive-space-md)",
+            paddingTop: "var(--hive-space-md)",
+            borderTop: "1px solid var(--hive-border)",
+          }}
+        >
+          {component.files.length > 0 && (
+            <div style={{ marginBottom: "var(--hive-space-sm)" }}>
+              <span className="hive-text-sm hive-text-muted" style={{ display: "block", marginBottom: "var(--hive-space-xs)" }}>
+                Files
+              </span>
+              <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, fontFamily: "var(--hive-font-mono)", lineHeight: 1.8 }}>
+                {component.files.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {component.dependencies.length > 0 && (
+            <div style={{ marginBottom: "var(--hive-space-sm)" }}>
+              <span className="hive-text-sm hive-text-muted" style={{ display: "block", marginBottom: "var(--hive-space-xs)" }}>
+                Dependencies
+              </span>
+              <div className="hive-flex hive-gap-xs hive-flex-wrap">
+                {component.dependencies.map((d) => (
+                  <Badge key={d} label={d} variant="neutral" />
+                ))}
+              </div>
+            </div>
+          )}
+          {component.schema && component.schema.tables && component.schema.tables.length > 0 && (
+            <div>
+              <span className="hive-text-sm hive-text-muted" style={{ display: "block", marginBottom: "var(--hive-space-xs)" }}>
+                Schema
+              </span>
+              {component.schema.tables.map((table) => (
+                <div key={table.name} style={{ marginBottom: "var(--hive-space-sm)" }}>
+                  <strong className="hive-text-sm">{table.name}</strong>
+                  <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", marginTop: 4 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", padding: "2px 8px", borderBottom: "1px solid var(--hive-border)" }}>Column</th>
+                        <th style={{ textAlign: "left", padding: "2px 8px", borderBottom: "1px solid var(--hive-border)" }}>Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.columns.map((col) => (
+                        <tr key={col.name}>
+                          <td style={{ padding: "2px 8px", fontFamily: "var(--hive-font-mono)" }}>
+                            {col.name}
+                            {col.primary && <Badge label="PK" variant="info" />}
+                            {col.unique && <Badge label="UQ" variant="neutral" />}
+                          </td>
+                          <td style={{ padding: "2px 8px", color: "var(--hive-fg-muted)" }}>{col.type}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
 
 function ComponentsSection({ components }: { components: Component[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+
   if (components.length === 0) return null;
 
   return (
@@ -99,7 +180,12 @@ function ComponentsSection({ components }: { components: Component[] }) {
         }}
       >
         {components.map((c) => (
-          <ComponentCard key={c.name} component={c} />
+          <ComponentCard
+            key={c.name}
+            component={c}
+            isSelected={selected === c.name}
+            onClick={() => setSelected(selected === c.name ? null : c.name)}
+          />
         ))}
       </div>
     </Card>

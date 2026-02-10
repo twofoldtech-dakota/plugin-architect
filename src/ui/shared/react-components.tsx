@@ -235,16 +235,24 @@ export function CodeBlock({ code, filename }: { code: string; filename?: string 
 
 // ── File Tree ─────────────────────────────────────────────
 
-export function FileTree({ files, basePath }: { files: string[]; basePath?: string }) {
+export function FileTree({ files, basePath }: { files: (string | { path: string; type: string })[]; basePath?: string }) {
+  // Normalize to strings
+  const paths = files.map((f) => (typeof f === "string" ? f : f.path));
+  const typeMap = new Map<string, string>();
+  for (const f of files) {
+    if (typeof f !== "string") typeMap.set(f.path, f.type);
+  }
+
   const stripped = basePath
-    ? files.map((f) => (f.startsWith(basePath) ? f.slice(basePath.length).replace(/^\//, "") : f))
-    : files;
+    ? paths.map((f) => (f.startsWith(basePath) ? f.slice(basePath.length).replace(/^\//, "") : f))
+    : paths;
 
   return (
     <div className="hive-file-tree">
       {stripped.map((file, i) => {
         const depth = file.split("/").length - 1;
-        const isDir = file.endsWith("/");
+        const origPath = paths[i];
+        const isDir = typeMap.has(origPath) ? typeMap.get(origPath) === "directory" : file.endsWith("/");
         return (
           <div
             key={i}

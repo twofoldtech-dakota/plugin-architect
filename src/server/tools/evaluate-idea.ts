@@ -67,7 +67,16 @@ export function registerEvaluateIdea(server: McpServer): void {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ idea: ideaData.name, slug, evaluation }, null, 2),
+            text: JSON.stringify({
+              idea: {
+                name: ideaData.name,
+                slug,
+                problem: ideaData.problem,
+                audience: ideaData.audience,
+                status: ideaData.status,
+              },
+              evaluation,
+            }, null, 2),
           },
         ],
       };

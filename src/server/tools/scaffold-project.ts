@@ -143,8 +143,12 @@ export function registerScaffoldProject(server: McpServer): void {
                 message: `Project "${name}" scaffolded from stack "${stack}"`,
                 project_path: projectDir,
                 hive_project: slug,
+                stack: { name: preset.name, description: preset.description },
                 files_created: createdFiles.length,
-                files: createdFiles,
+                files: createdFiles.map(f => ({
+                  path: f,
+                  type: f.endsWith("/") ? "directory" as const : "file" as const,
+                })),
               },
               null,
               2,

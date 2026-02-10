@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { useHiveApp } from "../../shared/hooks";
 import {
   Card,
+  Button,
   ProgressRing,
   StatCard,
   HBar,
@@ -102,7 +103,15 @@ function FileList({
   );
 }
 
-function ComponentDetail({ component }: { component: ComponentProgress }) {
+function ComponentDetail({
+  component,
+  showBuildNext,
+  onBuildNext,
+}: {
+  component: ComponentProgress;
+  showBuildNext?: boolean;
+  onBuildNext?: () => void;
+}) {
   const found = component.found_files.length;
   const expected = component.expected_files.length;
 
@@ -111,6 +120,11 @@ function ComponentDetail({ component }: { component: ComponentProgress }) {
       title={`${component.name} (${component.type}) -- ${found}/${expected} files`}
     >
       <div className="hive-flex hive-flex-col hive-gap-sm">
+        {component.description && (
+          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: "var(--hive-fg-muted)" }}>
+            {component.description}
+          </p>
+        )}
         <HBar
           label={component.name}
           value={found}
@@ -151,6 +165,12 @@ function ComponentDetail({ component }: { component: ComponentProgress }) {
             <FileList files={component.missing_files} color="var(--hive-error)" />
           </div>
         )}
+
+        {showBuildNext && onBuildNext && (
+          <div style={{ marginTop: "var(--hive-space-sm)" }}>
+            <Button label="Build Next" variant="primary" small onClick={onBuildNext} />
+          </div>
+        )}
       </div>
     </Expandable>
   );
@@ -160,10 +180,14 @@ function ComponentSection({
   title,
   components,
   color,
+  firstMissingBuildNext,
+  onBuildNext,
 }: {
   title: string;
   components: ComponentProgress[];
   color: string;
+  firstMissingBuildNext?: string;
+  onBuildNext?: (name: string) => void;
 }) {
   if (components.length === 0) return null;
   return (
@@ -175,8 +199,13 @@ function ComponentSection({
         }}
       >
         <div className="hive-flex hive-flex-col hive-gap-sm">
-          {components.map((c) => (
-            <ComponentDetail key={c.name} component={c} />
+          {components.map((c, i) => (
+            <ComponentDetail
+              key={c.name}
+              component={c}
+              showBuildNext={firstMissingBuildNext === c.name}
+              onBuildNext={onBuildNext ? () => onBuildNext(c.name) : undefined}
+            />
           ))}
         </div>
       </div>
@@ -187,12 +216,18 @@ function ComponentSection({
 // ── App ────────────────────────────────────────────────────
 
 function ProgressDashboardApp() {
-  const { data, isLoading, error } =
+  const { data, isLoading, error, sendMessage } =
     useHiveApp<ProgressData>("progress-dashboard");
 
   if (isLoading) return <LoadingState message="Checking progress..." />;
   if (error) return <ErrorState message={error} />;
   if (!data) return <EmptyState message="No progress data available." />;
+
+  const firstMissing = data.missing.length > 0 ? data.missing[0].name : undefined;
+
+  const handleBuildNext = (name: string) => {
+    sendMessage(`Build the ${name} component for ${data.project}`);
+  };
 
   return (
     <div style={{ padding: "var(--hive-space-lg)", maxWidth: 640 }}>
@@ -205,7 +240,7 @@ function ProgressDashboardApp() {
           textAlign: "center",
         }}
       >
-        Build Progress
+        Build Progress{data.project ? ` — ${data.project}` : ""}
       </h1>
 
       <ProgressHeader coverage={data.coverage_pct} />
@@ -231,6 +266,8 @@ function ProgressDashboardApp() {
           title="Missing"
           components={data.missing}
           color="var(--hive-error)"
+          firstMissingBuildNext={firstMissing}
+          onBuildNext={handleBuildNext}
         />
       </div>
     </div>

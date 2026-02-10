@@ -1,0 +1,129 @@
+{
+  "architecture": {
+    "project": "Recipe Remix",
+    "description": "AI-powered recipe adaptation for dietary restrictions",
+    "created": "2025-01-20",
+    "updated": "2025-01-25",
+    "status": "building",
+    "stack": {
+      "runtime": "Node.js",
+      "framework": "Next.js",
+      "language": "TypeScript",
+      "database": "SQLite",
+      "orm": "Drizzle"
+    },
+    "components": [
+      {
+        "name": "Recipe Parser",
+        "type": "service",
+        "description": "Extracts structured recipe data from URLs and raw text input",
+        "files": ["src/services/parser.ts", "src/services/parser.test.ts"],
+        "dependencies": ["Data Layer"]
+      },
+      {
+        "name": "Substitution Engine",
+        "type": "service",
+        "description": "AI-powered ingredient substitution that maintains flavor profiles",
+        "files": ["src/services/substitution.ts", "src/services/substitution.test.ts"],
+        "dependencies": ["Data Layer", "Recipe Parser"]
+      },
+      {
+        "name": "Data Layer",
+        "type": "data-layer",
+        "description": "SQLite database with Drizzle ORM for recipes and ingredients",
+        "files": ["src/db/schema.ts", "src/db/index.ts", "src/db/migrations/*"],
+        "dependencies": [],
+        "schema": {
+          "tables": [
+            {
+              "name": "recipes",
+              "columns": [
+                { "name": "id", "type": "integer", "primary": true },
+                { "name": "title", "type": "text" },
+                { "name": "source_url", "type": "text", "unique": true },
+                { "name": "created_at", "type": "timestamp" }
+              ]
+            },
+            {
+              "name": "ingredients",
+              "columns": [
+                { "name": "id", "type": "integer", "primary": true },
+                { "name": "recipe_id", "type": "integer" },
+                { "name": "name", "type": "text" },
+                { "name": "amount", "type": "text" }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "API Routes",
+        "type": "api-routes",
+        "description": "Next.js API routes for recipe CRUD and adaptation",
+        "files": ["src/app/api/recipes/route.ts", "src/app/api/adapt/route.ts"],
+        "dependencies": ["Recipe Parser", "Substitution Engine"]
+      },
+      {
+        "name": "Web UI",
+        "type": "ui",
+        "description": "React components for recipe input, display, and adaptation UI",
+        "files": ["src/app/page.tsx", "src/components/*"],
+        "dependencies": ["API Routes"]
+      }
+    ],
+    "data_flows": [
+      {
+        "name": "Recipe Adaptation Flow",
+        "steps": [
+          "User pastes recipe URL in Web UI",
+          "API Routes receives URL and calls Recipe Parser",
+          "Recipe Parser extracts structured data and stores in Data Layer",
+          "User selects dietary restriction",
+          "Substitution Engine generates adapted recipe",
+          "Web UI displays original vs adapted side-by-side"
+        ]
+      }
+    ],
+    "file_structure": {
+      "src": {
+        "app": {
+          "page.tsx": null,
+          "layout.tsx": null,
+          "api": {
+            "recipes": { "route.ts": null },
+            "adapt": { "route.ts": null }
+          }
+        },
+        "components": {},
+        "services": {
+          "parser.ts": null,
+          "substitution.ts": null
+        },
+        "db": {
+          "schema.ts": null,
+          "index.ts": null
+        }
+      }
+    }
+  },
+  "decisions": [
+    {
+      "id": "ADR-001",
+      "date": "2025-01-20",
+      "component": "Data Layer",
+      "decision": "Use SQLite with Drizzle instead of PostgreSQL",
+      "reasoning": "Personal project, single user, no need for concurrent writes. SQLite is simpler to deploy and back up.",
+      "alternatives_considered": ["PostgreSQL + Prisma", "JSON flat files"],
+      "revisit_when": "If multi-user support is needed"
+    },
+    {
+      "id": "ADR-002",
+      "date": "2025-01-22",
+      "component": "Substitution Engine",
+      "decision": "Use Claude API for ingredient substitution logic",
+      "reasoning": "Complex domain knowledge needed for flavor-aware substitutions. Rule-based approach would be too brittle.",
+      "alternatives_considered": ["Rule-based engine", "Fine-tuned model"],
+      "revisit_when": "If API costs become prohibitive"
+    }
+  ]
+}

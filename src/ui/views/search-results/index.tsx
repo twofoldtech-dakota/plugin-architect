@@ -14,6 +14,7 @@ import { useHiveApp } from "../../shared/hooks";
 import {
   Card,
   Badge,
+  Tag,
   TabBar,
   SearchBar,
   ScoreDots,
@@ -61,12 +62,99 @@ function relevanceColor(
   return "error";
 }
 
+// ── Type-specific detail rendering ─────────────────────────
+
+function PatternDetails({ data }: { data: Record<string, unknown> }) {
+  const tags = (data.tags as string[]) ?? [];
+  const usedIn = (data.used_in as string[]) ?? [];
+  const verified = data.verified as boolean | undefined;
+  return (
+    <div className="hive-flex hive-flex-col hive-gap-sm">
+      {verified && <Badge label="Verified" variant="success" />}
+      {tags.length > 0 && (
+        <div className="hive-flex hive-gap-xs hive-flex-wrap">
+          {tags.map((t) => <Tag key={t} label={t} />)}
+        </div>
+      )}
+      {usedIn.length > 0 && (
+        <span className="hive-text-sm hive-text-muted">
+          Used in: {usedIn.join(", ")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DependencyDetails({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="hive-flex hive-gap-sm hive-items-center hive-flex-wrap">
+      {data.version && <Badge label={`v${data.version}`} variant="neutral" />}
+      {typeof data.exports_count === "number" && (
+        <span className="hive-text-sm hive-text-muted">{data.exports_count} exports</span>
+      )}
+    </div>
+  );
+}
+
+function DecisionDetails({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="hive-flex hive-flex-col hive-gap-xs">
+      <div className="hive-flex hive-gap-sm hive-items-center">
+        {data.project && <Badge label={String(data.project)} variant="neutral" />}
+        {data.component && <Badge label={String(data.component)} variant="info" />}
+        {data.date && <span className="hive-text-sm hive-text-muted">{String(data.date)}</span>}
+      </div>
+      {data.reasoning && (
+        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: "var(--hive-fg-muted)" }}>
+          {String(data.reasoning)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ArchitectureDetails({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="hive-flex hive-gap-sm hive-items-center hive-flex-wrap">
+      {data.status && <Badge label={String(data.status)} variant="neutral" />}
+      {data.stack_summary && <span className="hive-text-sm hive-text-muted">{String(data.stack_summary)}</span>}
+      {typeof data.component_count === "number" && (
+        <span className="hive-text-sm hive-text-muted">{data.component_count} components</span>
+      )}
+    </div>
+  );
+}
+
+function TypeSpecificDetails({ result }: { result: SearchResult }) {
+  const data = result.data as Record<string, unknown> | null;
+  if (!data || typeof data !== "object") {
+    return <CodeBlock code={JSON.stringify(result.data, null, 2)} filename={`${result.type}/${result.name}`} />;
+  }
+  switch (result.type) {
+    case "pattern": return <PatternDetails data={data} />;
+    case "dependency": return <DependencyDetails data={data} />;
+    case "decision": return <DecisionDetails data={data} />;
+    case "architecture": return <ArchitectureDetails data={data} />;
+    default: return <CodeBlock code={JSON.stringify(result.data, null, 2)} filename={`${result.type}/${result.name}`} />;
+  }
+}
+
 // ── SearchResultCard ────────────────────────────────────────
 
-function SearchResultCard({ result }: { result: SearchResult }) {
+function SearchResultCard({
+  result,
+  onClick,
+}: {
+  result: SearchResult;
+  onClick?: () => void;
+}) {
   return (
     <Card className="search-result-card">
-      <div className="hive-flex hive-items-center hive-gap-sm hive-flex-wrap">
+      <div
+        className="hive-flex hive-items-center hive-gap-sm hive-flex-wrap"
+        style={onClick ? { cursor: "pointer" } : undefined}
+        onClick={onClick}
+      >
         <Badge label={result.type} variant={typeBadgeVariant(result.type)} />
         <strong className="hive-text-sm">{result.name}</strong>
         <div style={{ marginLeft: "auto" }}>
@@ -82,10 +170,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
       </p>
       <div className="hive-mt-sm">
         <Expandable title="Details">
-          <CodeBlock
-            code={JSON.stringify(result.data, null, 2)}
-            filename={`${result.type}/${result.name}`}
-          />
+          <TypeSpecificDetails result={result} />
         </Expandable>
       </div>
     </Card>
@@ -177,7 +262,17 @@ function SearchResults() {
       ) : (
         <div className="hive-flex hive-flex-col hive-gap-md">
           {filteredResults.map((r, i) => (
-            <SearchResultCard key={`${r.type}-${r.name}-${i}`} result={r} />
+            <SearchResultCard
+              key={`${r.type}-${r.name}-${i}`}
+              result={r}
+              onClick={() => {
+                if (r.type === "pattern") {
+                  callTool("hive_find_patterns", { query: r.name });
+                } else if (r.type === "architecture") {
+                  callTool("hive_get_architecture", { project: r.name });
+                }
+              }}
+            />
           ))}
         </div>
       )}

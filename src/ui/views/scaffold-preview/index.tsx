@@ -13,6 +13,7 @@ import { useHiveApp } from "../../shared/hooks";
 import {
   Card,
   StatCard,
+  TechPill,
   FileTree,
   CodeBlock,
   Badge,
@@ -122,6 +123,14 @@ function ScaffoldPreview() {
       <Card>
         <p className="hive-text-sm">{data.message}</p>
       </Card>
+
+      {/* Stack info */}
+      {data.stack && (
+        <div className="hive-flex hive-gap-sm hive-items-center hive-flex-wrap" style={{ marginTop: "var(--hive-space-md)" }}>
+          <TechPill label={data.stack.name} />
+          <span className="hive-text-sm hive-text-muted">{data.stack.description}</span>
+        </div>
+      )}
 
       <div style={{ marginTop: "var(--hive-space-lg)" }}>
         {/* Stats */}

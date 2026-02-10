@@ -46,11 +46,21 @@ function verdictBorderColor(verdict: Verdict): string {
 
 // ── Components ─────────────────────────────────────────────
 
-function ScorecardHeader({ idea, slug }: { idea: string; slug: string }) {
+function ScorecardHeader({ idea }: { idea: IdeaEvaluationData["idea"] }) {
   return (
     <div style={{ marginBottom: "var(--hive-space-lg)" }}>
-      <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{idea}</h1>
-      <span className="hive-text-muted hive-text-sm">{slug}</span>
+      <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{idea.name}</h1>
+      <span className="hive-text-muted hive-text-sm">{idea.slug}</span>
+      {idea.problem && (
+        <p style={{ margin: "var(--hive-space-sm) 0 0", fontSize: 13, lineHeight: 1.5 }}>
+          {idea.problem}
+        </p>
+      )}
+      {idea.audience && (
+        <p style={{ margin: "var(--hive-space-xs) 0 0", fontSize: 12, color: "var(--hive-fg-muted)" }}>
+          Audience: {idea.audience}
+        </p>
+      )}
     </div>
   );
 }
@@ -243,6 +253,7 @@ function ActionBar({
   sendMessage: (text: string) => Promise<void>;
 }) {
   const [promoting, setPromoting] = useState(false);
+  const [showVerdictMenu, setShowVerdictMenu] = useState(false);
 
   const handlePromote = async () => {
     setPromoting(true);
@@ -257,9 +268,14 @@ function ActionBar({
     sendMessage(`Re-evaluate the idea "${slug}" with fresh analysis`);
   };
 
+  const handleChangeVerdict = (newVerdict: string) => {
+    setShowVerdictMenu(false);
+    sendMessage(`Change the verdict for idea "${slug}" to "${newVerdict}"`);
+  };
+
   return (
     <div
-      className="hive-flex hive-gap-sm hive-items-center"
+      className="hive-flex hive-gap-sm hive-items-center hive-flex-wrap"
       style={{
         padding: "var(--hive-space-md) 0",
         borderTop: "1px solid var(--hive-border)",
@@ -272,6 +288,46 @@ function ActionBar({
         onClick={handlePromote}
         disabled={promoting}
       />
+      <div style={{ position: "relative" }}>
+        <Button label="Change Verdict" onClick={() => setShowVerdictMenu(!showVerdictMenu)} />
+        {showVerdictMenu && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              marginTop: 4,
+              background: "var(--hive-bg)",
+              border: "1px solid var(--hive-border)",
+              borderRadius: "var(--hive-radius-md)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              zIndex: 10,
+              minWidth: 180,
+            }}
+          >
+            {(["build", "park", "kill", "needs_more_thinking"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => handleChangeVerdict(v)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "var(--hive-space-sm) var(--hive-space-md)",
+                  background: "none",
+                  border: "none",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "var(--hive-fg)",
+                }}
+              >
+                {verdictConfig[v].label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <Button label="Re-evaluate" onClick={handleReEvaluate} />
     </div>
   );
@@ -287,11 +343,11 @@ function IdeaScorecardApp() {
   if (error) return <ErrorState message={error} />;
   if (!data) return <EmptyState message="No evaluation data available." />;
 
-  const { idea, slug, evaluation } = data;
+  const { idea, evaluation } = data;
 
   return (
     <div style={{ padding: "var(--hive-space-lg)", maxWidth: 640 }}>
-      <ScorecardHeader idea={idea} slug={slug} />
+      <ScorecardHeader idea={idea} />
       <VerdictBanner verdict={evaluation.verdict} reasoning={evaluation.reasoning} />
 
       <div className="hive-flex hive-flex-col hive-gap-md">
@@ -300,7 +356,7 @@ function IdeaScorecardApp() {
         <ScopeSection scope={evaluation.scope} />
       </div>
 
-      <ActionBar slug={slug} callTool={callTool} sendMessage={sendMessage} />
+      <ActionBar slug={idea.slug} callTool={callTool} sendMessage={sendMessage} />
     </div>
   );
 }

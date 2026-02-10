@@ -41,6 +41,11 @@ function PatternCard({
       ? pattern.description.slice(0, 120) + "..."
       : pattern.description;
 
+  // Show first 3 lines of first file as preview
+  const codePreview = pattern.files.length > 0
+    ? pattern.files[0].content.split("\n").slice(0, 3).join("\n")
+    : null;
+
   return (
     <Card className="pattern-card" onClick={onClick}>
       <div
@@ -60,6 +65,21 @@ function PatternCard({
         <p className="hive-text-muted hive-text-sm hive-mt-sm">
           {descriptionTruncated}
         </p>
+        {codePreview && (
+          <pre style={{
+            margin: "var(--hive-space-sm) 0 0",
+            padding: "var(--hive-space-sm)",
+            background: "var(--hive-bg-subtle)",
+            borderRadius: "var(--hive-radius-sm)",
+            fontSize: 11,
+            lineHeight: 1.5,
+            overflow: "hidden",
+            maxHeight: 60,
+            fontFamily: "var(--hive-font-mono)",
+          }}>
+            {codePreview}
+          </pre>
+        )}
         {pattern.tags.length > 0 && (
           <div className="hive-flex hive-flex-wrap hive-gap-xs hive-mt-sm">
             {pattern.tags.map((t) => (
@@ -77,10 +97,15 @@ function PatternCard({
 function PatternDetail({
   pattern,
   onClose,
+  onApply,
 }: {
   pattern: Pattern;
   onClose: () => void;
+  onApply: (projectSlug: string) => void;
 }) {
+  const [projectSlug, setProjectSlug] = useState("");
+  const [showApplyInput, setShowApplyInput] = useState(false);
+
   return (
     <Modal title={pattern.name} onClose={onClose}>
       <div className="hive-flex hive-items-center hive-gap-sm hive-flex-wrap">
@@ -126,9 +151,45 @@ function PatternDetail({
         ))}
       </div>
 
-      {/* Placeholder Apply button */}
+      {/* Apply Pattern */}
       <div className="hive-mt-lg">
-        <Button label="Apply Pattern" variant="primary" disabled />
+        {!showApplyInput ? (
+          <Button
+            label="Apply Pattern"
+            variant="primary"
+            onClick={() => setShowApplyInput(true)}
+          />
+        ) : (
+          <div className="hive-flex hive-gap-sm hive-items-center">
+            <input
+              className="hive-input"
+              type="text"
+              placeholder="Project slug..."
+              value={projectSlug}
+              onChange={(e) => setProjectSlug(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && projectSlug.trim()) {
+                  onApply(projectSlug.trim());
+                }
+              }}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Apply"
+              variant="primary"
+              small
+              onClick={() => {
+                if (projectSlug.trim()) onApply(projectSlug.trim());
+              }}
+              disabled={!projectSlug.trim()}
+            />
+            <Button
+              label="Cancel"
+              small
+              onClick={() => { setShowApplyInput(false); setProjectSlug(""); }}
+            />
+          </div>
+        )}
       </div>
     </Modal>
   );
@@ -262,6 +323,10 @@ function PatternGallery() {
         <PatternDetail
           pattern={selectedPattern}
           onClose={() => setSelectedPattern(null)}
+          onApply={(projectSlug) => {
+            callTool("hive_add_feature", { project: projectSlug, feature: selectedPattern.slug });
+            setSelectedPattern(null);
+          }}
         />
       )}
     </div>

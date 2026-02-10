@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useHiveApp } from "../../shared/hooks";
 import {
   Badge,
+  Button,
+  ScoreDots,
   Modal,
   LoadingState,
   ErrorState,
@@ -80,17 +82,43 @@ function verdictVariant(
 function KanbanCard({
   item,
   onClick,
+  onEvaluate,
+  onPromote,
 }: {
   item: IdeaListItem;
   onClick: () => void;
+  onEvaluate?: () => void;
+  onPromote?: () => void;
 }) {
   return (
     <div className="hive-kanban-card" onClick={onClick}>
       <div className="hive-kanban-card-title">{item.name}</div>
       <div className="hive-kanban-card-desc">{item.problem}</div>
-      {item.verdict && (
-        <div style={{ marginTop: "var(--hive-space-xs)" }}>
+      <div className="hive-flex hive-items-center hive-gap-xs hive-flex-wrap" style={{ marginTop: "var(--hive-space-xs)" }}>
+        {item.verdict && (
           <Badge label={item.verdict} variant={verdictVariant(item.verdict)} />
+        )}
+        {item.feasibility_score != null && (
+          <ScoreDots score={item.feasibility_score} max={5} />
+        )}
+        {item.estimated_sessions != null && (
+          <span className="hive-badge hive-badge-neutral" style={{ fontSize: 10 }}>
+            {item.estimated_sessions} sessions
+          </span>
+        )}
+      </div>
+      {(onEvaluate || onPromote) && (
+        <div className="hive-flex hive-gap-xs" style={{ marginTop: "var(--hive-space-sm)" }} onClick={(e) => e.stopPropagation()}>
+          {onEvaluate && (
+            <button type="button" className="hive-btn hive-btn-sm" onClick={onEvaluate}>
+              Evaluate
+            </button>
+          )}
+          {onPromote && (
+            <button type="button" className="hive-btn hive-btn-sm hive-btn-primary" onClick={onPromote}>
+              Promote
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -101,10 +129,14 @@ function KanbanColumn({
   def,
   items,
   onCardClick,
+  onEvaluate,
+  onPromote,
 }: {
   def: ColumnDef;
   items: IdeaListItem[];
   onCardClick: (item: IdeaListItem) => void;
+  onEvaluate?: (slug: string) => void;
+  onPromote?: (slug: string) => void;
 }) {
   return (
     <div className="hive-kanban-column">
@@ -137,6 +169,8 @@ function KanbanColumn({
             key={item.slug}
             item={item}
             onClick={() => onCardClick(item)}
+            onEvaluate={def.id === "raw" && onEvaluate ? () => onEvaluate(item.slug) : undefined}
+            onPromote={def.id === "approved" && onPromote ? () => onPromote(item.slug) : undefined}
           />
         ))
       )}
@@ -179,6 +213,23 @@ function IdeaDetailModal({
           </p>
         </div>
 
+        {item.audience && (
+          <div>
+            <span
+              className="hive-text-sm hive-text-muted"
+              style={{
+                display: "block",
+                marginBottom: "var(--hive-space-xs)",
+              }}
+            >
+              Audience
+            </span>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+              {item.audience}
+            </p>
+          </div>
+        )}
+
         <div>
           <span
             className="hive-text-sm hive-text-muted"
@@ -212,7 +263,7 @@ function IdeaDetailModal({
 // ── App ────────────────────────────────────────────────────
 
 function IdeaKanbanApp() {
-  const { data, isLoading, error } = useHiveApp<IdeaListItem[]>("idea-kanban");
+  const { data, isLoading, error, callTool, sendMessage } = useHiveApp<IdeaListItem[]>("idea-kanban");
   const [selectedItem, setSelectedItem] = useState<IdeaListItem | null>(null);
 
   if (isLoading) return <LoadingState message="Loading ideas..." />;
@@ -234,10 +285,17 @@ function IdeaKanbanApp() {
     if (grouped[status]) {
       grouped[status].push(item);
     } else {
-      // Fallback: put unknown statuses in "raw"
       grouped.raw.push(item);
     }
   }
+
+  const handleEvaluate = (slug: string) => {
+    sendMessage(`Evaluate idea ${slug}`);
+  };
+
+  const handlePromote = (slug: string) => {
+    callTool("hive_promote_idea", { idea: slug });
+  };
 
   return (
     <div style={{ padding: "var(--hive-space-lg)" }}>
@@ -259,6 +317,8 @@ function IdeaKanbanApp() {
             def={col}
             items={grouped[col.id]}
             onCardClick={setSelectedItem}
+            onEvaluate={handleEvaluate}
+            onPromote={handlePromote}
           />
         ))}
       </div>

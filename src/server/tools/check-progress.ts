@@ -11,6 +11,7 @@ type ComponentStatus = "built" | "in_progress" | "missing";
 interface ComponentProgress {
   name: string;
   type: string;
+  description: string;
   status: ComponentStatus;
   expected_files: string[];
   found_files: string[];
@@ -142,6 +143,7 @@ export function registerCheckProgress(server: McpServer): void {
         const progress: ComponentProgress = {
           name: component.name,
           type: component.type,
+          description: component.description,
           status,
           expected_files: component.files,
           found_files: foundFiles,
@@ -160,7 +162,7 @@ export function registerCheckProgress(server: McpServer): void {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ built, in_progress, missing, coverage_pct }, null, 2),
+            text: JSON.stringify({ project: architecture.project, built, in_progress, missing, coverage_pct }, null, 2),
           },
         ],
       };

@@ -48,8 +48,13 @@ import type { Pattern } from "../../server/types/pattern.js";
 
 /** evaluate-idea tool return shape */
 export interface IdeaEvaluationData {
-  idea: string;
-  slug: string;
+  idea: {
+    name: string;
+    slug: string;
+    problem: string;
+    audience: string;
+    status: string;
+  };
   evaluation: Evaluation;
 }
 
@@ -59,7 +64,10 @@ export interface IdeaListItem {
   slug: string;
   status: string;
   problem: string;
+  audience?: string;
   verdict?: string;
+  feasibility_score?: number;
+  estimated_sessions?: number;
   created: string;
 }
 
@@ -73,6 +81,7 @@ export interface ArchitectureViewData {
 export interface ComponentProgress {
   name: string;
   type: string;
+  description: string;
   status: "built" | "in_progress" | "missing";
   expected_files: string[];
   found_files: string[];
@@ -80,6 +89,7 @@ export interface ComponentProgress {
 }
 
 export interface ProgressData {
+  project: string;
   built: ComponentProgress[];
   in_progress: ComponentProgress[];
   missing: ComponentProgress[];
@@ -114,12 +124,18 @@ export interface FeatureEvaluationData {
 }
 
 /** scaffold-project tool return shape */
+export interface ScaffoldFile {
+  path: string;
+  type: "file" | "directory";
+}
+
 export interface ScaffoldData {
   message: string;
   project_path: string;
   hive_project: string;
+  stack?: { name: string; description: string };
   files_created: number;
-  files: string[];
+  files: ScaffoldFile[];
 }
 
 /** search-knowledge tool return shape */
