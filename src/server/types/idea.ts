@@ -1,0 +1,36 @@
+export interface Idea {
+  name: string;
+  slug: string;
+  problem: string;
+  audience: string;
+  proposed_solution: string;
+  assumptions: string[];
+  open_questions: string[];
+  status: "raw" | "evaluated" | "approved" | "rejected" | "parked";
+  created: string;
+  updated: string;
+  evaluation?: Evaluation;
+}
+
+export interface Evaluation {
+  feasibility: {
+    score: number;
+    has_patterns: boolean;
+    known_stack: boolean;
+    estimated_sessions: number;
+    unknowns: string[];
+  };
+  competitive: {
+    exists_already: boolean;
+    differentiator: string;
+    references: string[];
+  };
+  scope: {
+    mvp_definition: string;
+    mvp_components: string[];
+    deferred: string[];
+    full_vision: string;
+  };
+  verdict: "build" | "park" | "kill" | "needs_more_thinking";
+  reasoning: string;
+}

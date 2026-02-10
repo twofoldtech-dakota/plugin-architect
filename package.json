@@ -1,0 +1,35 @@
+{
+  "name": "hive-mcp",
+  "version": "0.1.0",
+  "description": "Personal knowledge-compounding MCP server",
+  "type": "module",
+  "main": "dist/server/index.js",
+  "bin": {
+    "hive": "dist/server/index.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run build:ui",
+    "build:server": "tsc",
+    "build:ui": "node dist/build/bundle.js",
+    "dev": "tsc --watch",
+    "start": "node dist/server/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "knowledge",
+    "architecture"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}
