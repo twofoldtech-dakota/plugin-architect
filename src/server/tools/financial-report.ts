@@ -1,18 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { InvoiceStore, MonthlyExpenses } from "../types/business.js";
-import type { FleetCosts, FleetCostEntry, RevenueConfig } from "../types/fleet.js";
-
-async function safeRead<T>(path: string): Promise<T | null> {
-  try {
-    return await readYaml<T>(path);
-  } catch {
-    return null;
-  }
-}
+import { businessRepo } from "../storage/index.js";
 
 function getDateRange(period: string, start?: string, end?: string): { from: string; to: string } {
   const now = new Date();
@@ -60,97 +48,47 @@ export function registerFinancialReport(server: McpServer): void {
       const range = getDateRange(period, start, end);
 
       // ---- Revenue ----
-      let revenueFiles: string[];
-      try {
-        revenueFiles = (await readdir(HIVE_DIRS.revenue)).filter((f) => f.endsWith(".yaml"));
-      } catch {
-        revenueFiles = [];
-      }
+      const allRevenue = businessRepo.listRevenue(undefined, range.from);
+      const filteredRevenue = allRevenue.filter((e) => e.date >= range.from && e.date <= range.to);
 
       let totalRevenue = 0;
-      let totalRecurring = 0;
-      let totalOneTime = 0;
       const revenueByProject: Record<string, number> = {};
       const revenueByMonth: Record<string, number> = {};
 
-      for (const file of revenueFiles) {
-        const projectSlug = file.replace(".yaml", "");
-        const rev = await safeRead<RevenueConfig>(join(HIVE_DIRS.revenue, file));
-        if (!rev) continue;
-
-        const entries = rev.entries.filter((e) => e.date >= range.from && e.date <= range.to);
-        const projectTotal = entries.reduce((sum, e) => sum + e.amount, 0);
-        totalRevenue += projectTotal;
-        revenueByProject[projectSlug] = Math.round(projectTotal * 100) / 100;
-
-        const isRecurring = rev.model === "subscription" || rev.model === "saas" || !rev.model;
-        if (isRecurring) totalRecurring += projectTotal;
-        else totalOneTime += projectTotal;
-
-        for (const entry of entries) {
-          const month = entry.date.slice(0, 7);
-          revenueByMonth[month] = (revenueByMonth[month] ?? 0) + entry.amount;
-        }
+      for (const entry of filteredRevenue) {
+        totalRevenue += entry.amount;
+        revenueByProject[entry.project] = (revenueByProject[entry.project] ?? 0) + entry.amount;
+        const month = entry.date.slice(0, 7);
+        revenueByMonth[month] = (revenueByMonth[month] ?? 0) + entry.amount;
       }
 
+      // Round revenue values
+      for (const key of Object.keys(revenueByProject)) {
+        revenueByProject[key] = Math.round(revenueByProject[key] * 100) / 100;
+      }
+      for (const key of Object.keys(revenueByMonth)) {
+        revenueByMonth[key] = Math.round(revenueByMonth[key] * 100) / 100;
+      }
+      totalRevenue = Math.round(totalRevenue * 100) / 100;
+
       // ---- Expenses ----
+      const allExpenses = businessRepo.listExpenses(range.from);
+      const filteredExpenses = allExpenses.filter((e) => e.date >= range.from && e.date <= range.to);
+
       let totalExpenses = 0;
       const expensesByCategory: Record<string, number> = {};
       const expensesByVendor: Record<string, number> = {};
       const expensesByMonth: Record<string, number> = {};
 
-      // Business expenses
-      try {
-        const years = await readdir(HIVE_DIRS.businessExpenses);
-        for (const year of years) {
-          let months: string[];
-          try {
-            months = await readdir(join(HIVE_DIRS.businessExpenses, year));
-          } catch {
-            continue;
-          }
-          for (const monthFile of months.filter((f) => f.endsWith(".yaml"))) {
-            const data = await safeRead<MonthlyExpenses>(join(HIVE_DIRS.businessExpenses, year, monthFile));
-            if (!data) continue;
-
-            const entries = data.entries.filter((e) => e.date >= range.from && e.date <= range.to);
-            for (const e of entries) {
-              totalExpenses += e.amount;
-              expensesByCategory[e.category] = (expensesByCategory[e.category] ?? 0) + e.amount;
-              expensesByVendor[e.vendor] = (expensesByVendor[e.vendor] ?? 0) + e.amount;
-              const month = e.date.slice(0, 7);
-              expensesByMonth[month] = (expensesByMonth[month] ?? 0) + e.amount;
-            }
-          }
-        }
-      } catch {
-        // No business expenses
+      for (const e of filteredExpenses) {
+        totalExpenses += e.amount;
+        expensesByCategory[e.category] = (expensesByCategory[e.category] ?? 0) + e.amount;
+        expensesByVendor[e.vendor] = (expensesByVendor[e.vendor] ?? 0) + e.amount;
+        const month = e.date.slice(0, 7);
+        expensesByMonth[month] = (expensesByMonth[month] ?? 0) + e.amount;
       }
 
-      // Fleet costs
-      try {
-        const costsPath = join(HIVE_DIRS.fleet, "costs.yaml");
-        const fleetCosts = await readYaml<FleetCosts>(costsPath);
-        const normalize = (entry: FleetCostEntry): number =>
-          entry.period === "yearly" ? entry.amount / 12 : entry.amount;
-
-        // Estimate fleet costs over the range period
-        const fromDate = new Date(range.from);
-        const toDate = new Date(range.to);
-        const months = (toDate.getFullYear() - fromDate.getFullYear()) * 12 + toDate.getMonth() - fromDate.getMonth() + 1;
-
-        for (const entry of fleetCosts.entries) {
-          const monthly = normalize(entry);
-          const periodTotal = monthly * months;
-          totalExpenses += periodTotal;
-          expensesByCategory[entry.category] = (expensesByCategory[entry.category] ?? 0) + periodTotal;
-          expensesByVendor[entry.provider] = (expensesByVendor[entry.provider] ?? 0) + periodTotal;
-        }
-      } catch {
-        // No fleet costs
-      }
-
-      // Round expenses
+      // Round expense values
       for (const key of Object.keys(expensesByCategory)) {
         expensesByCategory[key] = Math.round(expensesByCategory[key] * 100) / 100;
       }
@@ -160,10 +98,6 @@ export function registerFinancialReport(server: McpServer): void {
       for (const key of Object.keys(expensesByMonth)) {
         expensesByMonth[key] = Math.round(expensesByMonth[key] * 100) / 100;
       }
-      for (const key of Object.keys(revenueByMonth)) {
-        revenueByMonth[key] = Math.round(revenueByMonth[key] * 100) / 100;
-      }
-      totalRevenue = Math.round(totalRevenue * 100) / 100;
       totalExpenses = Math.round(totalExpenses * 100) / 100;
 
       // ---- Profit ----
@@ -175,28 +109,25 @@ export function registerFinancialReport(server: McpServer): void {
       let amountOutstanding = 0;
       const overdueInvoices: { id: string; client: string; amount: number; due_date?: string }[] = [];
 
-      const storePath = join(HIVE_DIRS.businessInvoices, "store.yaml");
-      const invoiceStore = await safeRead<InvoiceStore>(storePath);
-      if (invoiceStore) {
-        const today = new Date().toISOString().split("T")[0];
-        for (const inv of invoiceStore.invoices) {
-          if (inv.status === "sent" || inv.status === "overdue") {
-            unpaidCount++;
-            amountOutstanding += inv.total;
-            if (inv.due_date && inv.due_date < today) {
-              overdueInvoices.push({ id: inv.id, client: inv.client, amount: inv.total, due_date: inv.due_date });
-            }
+      const allInvoices = businessRepo.listInvoices();
+      const today = new Date().toISOString().split("T")[0];
+      for (const inv of allInvoices) {
+        if (inv.status === "sent" || inv.status === "overdue") {
+          unpaidCount++;
+          amountOutstanding += inv.total;
+          if (inv.due_date && inv.due_date < today) {
+            overdueInvoices.push({ id: inv.id!, client: inv.client_id, amount: inv.total, due_date: inv.due_date });
           }
         }
       }
       amountOutstanding = Math.round(amountOutstanding * 100) / 100;
 
-      // ---- Tax Estimates (for tax_ready format) ----
+      // ---- Tax Estimates ----
       let taxEstimates: Record<string, unknown> | undefined;
       if (format === "tax_ready") {
-        const deductible = totalExpenses; // Simplified — all business expenses are deductible
+        const deductible = totalExpenses;
         const taxableIncome = Math.max(0, totalRevenue - deductible);
-        const estimatedRate = 0.25; // Rough estimate
+        const estimatedRate = 0.25;
         const estimatedLiability = Math.round(taxableIncome * estimatedRate * 100) / 100;
         const quarterlyPayment = Math.round(estimatedLiability / 4 * 100) / 100;
 
@@ -225,10 +156,6 @@ export function registerFinancialReport(server: McpServer): void {
         range,
         revenue: {
           total: totalRevenue,
-          by_type: {
-            recurring: Math.round(totalRecurring * 100) / 100,
-            one_time: Math.round(totalOneTime * 100) / 100,
-          },
           by_project: revenueByProject,
         },
         expenses: {
@@ -255,12 +182,7 @@ export function registerFinancialReport(server: McpServer): void {
       }
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
+        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
       };
     },
   );

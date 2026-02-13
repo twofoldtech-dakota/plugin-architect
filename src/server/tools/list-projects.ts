@@ -1,8 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { Architecture } from "../types/architecture.js";
+import { projectsRepo } from "../storage/index.js";
 
 export function registerListProjects(server: McpServer): void {
   server.tool(
@@ -10,43 +7,7 @@ export function registerListProjects(server: McpServer): void {
     "List all tracked projects with their status and stack",
     {},
     async () => {
-      let dirs: string[];
-      try {
-        dirs = await readdir(HIVE_DIRS.projects);
-      } catch {
-        return {
-          content: [{ type: "text" as const, text: "No projects found." }],
-        };
-      }
-
-      if (dirs.length === 0) {
-        return {
-          content: [{ type: "text" as const, text: "No projects found." }],
-        };
-      }
-
-      const projects: Array<{
-        name: string;
-        slug: string;
-        status: string;
-        stack: Record<string, string>;
-        description: string;
-      }> = [];
-
-      for (const dir of dirs) {
-        try {
-          const arch = await readYaml<Architecture>(join(HIVE_DIRS.projects, dir, "architecture.yaml"));
-          projects.push({
-            name: arch.project,
-            slug: dir,
-            status: arch.status,
-            stack: arch.stack,
-            description: arch.description,
-          });
-        } catch {
-          // Skip directories without valid architecture
-        }
-      }
+      const projects = projectsRepo.list();
 
       if (projects.length === 0) {
         return {
@@ -54,11 +15,19 @@ export function registerListProjects(server: McpServer): void {
         };
       }
 
+      const summaries = projects.map((p) => ({
+        name: p.name,
+        slug: p.slug,
+        status: p.architecture.status,
+        stack: p.architecture.stack,
+        description: p.description,
+      }));
+
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(projects, null, 2),
+            text: JSON.stringify(summaries, null, 2),
           },
         ],
       };

@@ -1,12 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { Pattern, PatternIndex } from "../types/pattern.js";
-import type { Architecture, DecisionLog, Decision } from "../types/architecture.js";
-import type { DependencyMeta, DependencySurface } from "../types/dependency.js";
-import type { Antipattern, AntipatternIndex } from "../types/antipattern.js";
+import { patternsRepo, projectsRepo, decisionsRepo, dependenciesRepo, antipatternsRepo } from "../storage/index.js";
 
 interface Insight {
   patterns_to_use: Array<{ name: string; slug: string; description: string; usage_count: number }>;
@@ -47,167 +41,104 @@ export function registerGetInsights(server: McpServer): void {
       };
 
       // 1. Find relevant patterns
-      try {
-        const index = await readYaml<PatternIndex>(join(HIVE_DIRS.patterns, "index.yaml"));
-        for (const entry of index.patterns) {
-          const tagMatch = entry.tags.some((t) => typeTerms.includes(t.toLowerCase()));
-          const nameMatch = matchesType(entry.name, typeTerms);
-          if (!tagMatch && !nameMatch) continue;
+      const allPatterns = patternsRepo.list();
+      for (const pattern of allPatterns) {
+        const tagMatch = pattern.tags.some((t) => typeTerms.includes(t.toLowerCase()));
+        const nameMatch = matchesType(pattern.name, typeTerms);
+        if (!tagMatch && !nameMatch) continue;
 
-          try {
-            const pattern = await readYaml<Pattern>(join(HIVE_DIRS.patterns, `${entry.slug}.yaml`));
-            // If stack filter provided, check stack overlap
-            if (stackTerms.length > 0 && pattern.stack) {
-              const hasStackOverlap = pattern.stack.some((s) => stackTerms.includes(s.toLowerCase()));
-              if (!hasStackOverlap && !tagMatch) continue;
-            }
-            insight.patterns_to_use.push({
-              name: pattern.name,
-              slug: entry.slug,
-              description: pattern.description,
-              usage_count: pattern.used_in?.length ?? 0,
-            });
-          } catch {
-            // skip
-          }
+        if (stackTerms.length > 0 && pattern.stack) {
+          const hasStackOverlap = pattern.stack.some((s) => stackTerms.includes(s.toLowerCase()));
+          if (!hasStackOverlap && !tagMatch) continue;
         }
-      } catch {
-        // no patterns
+        insight.patterns_to_use.push({
+          name: pattern.name,
+          slug: pattern.slug,
+          description: pattern.description,
+          usage_count: pattern.used_in?.length ?? 0,
+        });
       }
-
-      // Sort patterns by usage count
       insight.patterns_to_use.sort((a, b) => b.usage_count - a.usage_count);
 
       // 2. Find relevant decisions across projects
-      try {
-        const projectDirs = await readdir(HIVE_DIRS.projects);
-        const stackCounts = new Map<string, string[]>();
+      const projects = projectsRepo.list();
+      const stackCounts = new Map<string, string[]>();
 
-        for (const dir of projectDirs) {
-          // Check if this project is relevant
-          let arch: Architecture | undefined;
-          try {
-            arch = await readYaml<Architecture>(join(HIVE_DIRS.projects, dir, "architecture.yaml"));
-          } catch {
-            continue;
-          }
+      for (const proj of projects) {
+        const arch = proj.architecture;
+        const archText = `${arch.description} ${arch.components.map((c) => `${c.name} ${c.type} ${c.description}`).join(" ")}`;
+        const archRelevant = matchesType(archText, typeTerms);
+        const stackValues = Object.values(arch.stack).map((v) => v.toLowerCase());
+        const stackRelevant = stackTerms.length > 0 && stackTerms.some((t) => stackValues.includes(t));
 
-          const archText = `${arch.description} ${arch.components.map((c) => `${c.name} ${c.type} ${c.description}`).join(" ")}`;
-          const archRelevant = matchesType(archText, typeTerms);
-          const stackValues = Object.values(arch.stack).map((v) => v.toLowerCase());
-          const stackRelevant = stackTerms.length > 0 && stackTerms.some((t) => stackValues.includes(t));
+        if (!archRelevant && !stackRelevant) continue;
 
-          if (!archRelevant && !stackRelevant) continue;
-
-          // Collect stack preferences from relevant projects
-          for (const [key, value] of Object.entries(arch.stack)) {
-            const mapKey = `${key}:${value}`;
-            if (!stackCounts.has(mapKey)) stackCounts.set(mapKey, []);
-            stackCounts.get(mapKey)!.push(dir);
-          }
-
-          // Read decisions
-          try {
-            const log = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, dir, "decisions.yaml"));
-            for (const decision of log.decisions) {
-              const decText = `${decision.component} ${decision.decision} ${decision.reasoning}`;
-              if (matchesType(decText, typeTerms)) {
-                insight.decisions_made_before.push({
-                  project: dir,
-                  component: decision.component,
-                  decision: decision.decision,
-                  reasoning: decision.reasoning,
-                });
-              }
-            }
-          } catch {
-            // no decisions
-          }
+        for (const [key, value] of Object.entries(arch.stack)) {
+          const mapKey = `${key}:${value}`;
+          if (!stackCounts.has(mapKey)) stackCounts.set(mapKey, []);
+          stackCounts.get(mapKey)!.push(proj.slug);
         }
 
-        // Build stack preferences
-        for (const [mapKey, projects] of stackCounts) {
-          const [key, value] = mapKey.split(":");
-          insight.stack_preferences.push({ key, value, used_by: projects });
+        const decisions = decisionsRepo.listByProject(proj.id);
+        for (const decision of decisions) {
+          const decText = `${decision.component} ${decision.decision} ${decision.reasoning}`;
+          if (matchesType(decText, typeTerms)) {
+            insight.decisions_made_before.push({
+              project: proj.slug,
+              component: decision.component,
+              decision: decision.decision,
+              reasoning: decision.reasoning,
+            });
+          }
         }
-        insight.stack_preferences.sort((a, b) => b.used_by.length - a.used_by.length);
-      } catch {
-        // no projects
       }
+
+      for (const [mapKey, usedBy] of stackCounts) {
+        const [key, value] = mapKey.split(":");
+        insight.stack_preferences.push({ key, value, used_by: usedBy });
+      }
+      insight.stack_preferences.sort((a, b) => b.used_by.length - a.used_by.length);
 
       // 3. Find relevant antipatterns
-      try {
-        const apIndex = await readYaml<AntipatternIndex>(join(HIVE_DIRS.antipatterns, "index.yaml"));
-        for (const entry of apIndex.antipatterns) {
-          const tagMatch = entry.tags.some((t) => typeTerms.includes(t.toLowerCase()));
-          const nameMatch = matchesType(entry.name, typeTerms);
-          if (!tagMatch && !nameMatch) continue;
-
-          try {
-            const ap = await readYaml<Antipattern>(join(HIVE_DIRS.antipatterns, `${entry.slug}.yaml`));
-            insight.antipatterns_to_avoid.push({
-              name: ap.name,
-              severity: ap.severity,
-              why_bad: ap.why_bad,
-              instead: ap.instead,
-            });
-          } catch {
-            // skip
-          }
-        }
-      } catch {
-        // no antipatterns
+      const allAntipatterns = antipatternsRepo.list();
+      for (const ap of allAntipatterns) {
+        const tagMatch = ap.tags.some((t) => typeTerms.includes(t.toLowerCase()));
+        const nameMatch = matchesType(ap.name, typeTerms);
+        if (!tagMatch && !nameMatch) continue;
+        insight.antipatterns_to_avoid.push({
+          name: ap.name,
+          severity: ap.severity,
+          why_bad: ap.why_bad,
+          instead: ap.instead,
+        });
       }
 
-      // Sort antipatterns by severity
       const severityOrder = { critical: 3, warning: 2, minor: 1 };
       insight.antipatterns_to_avoid.sort(
         (a, b) => severityOrder[b.severity as keyof typeof severityOrder] - severityOrder[a.severity as keyof typeof severityOrder],
       );
 
       // 4. Find relevant dependency gotchas
-      try {
-        const depDirs = await readdir(HIVE_DIRS.dependencies);
-        for (const depName of depDirs) {
-          try {
-            const surface = await readYaml<DependencySurface>(
-              join(HIVE_DIRS.dependencies, depName, "surface.yaml"),
-            );
-            if (surface.gotchas && surface.gotchas.length > 0) {
-              // Check if dependency is relevant to this system type
-              const depText = `${depName} ${(surface.exports ?? []).map((e) => e.name).join(" ")}`;
-              if (matchesType(depText, typeTerms) || matchesType(depText, stackTerms)) {
-                insight.dependency_gotchas.push({
-                  dependency: depName,
-                  gotchas: surface.gotchas,
-                });
-              }
-            }
-          } catch {
-            // skip
+      const allDeps = dependenciesRepo.list();
+      for (const dep of allDeps) {
+        if (dep.gotchas && dep.gotchas.length > 0) {
+          const depText = `${dep.name} ${(dep.exports ?? []).map((e) => e.name).join(" ")}`;
+          if (matchesType(depText, typeTerms) || matchesType(depText, stackTerms)) {
+            insight.dependency_gotchas.push({
+              dependency: dep.name,
+              gotchas: dep.gotchas,
+            });
           }
         }
-      } catch {
-        // no dependencies
       }
 
       // Build summary
       const parts: string[] = [];
-      if (insight.patterns_to_use.length > 0) {
-        parts.push(`${insight.patterns_to_use.length} relevant pattern(s)`);
-      }
-      if (insight.decisions_made_before.length > 0) {
-        parts.push(`${insight.decisions_made_before.length} past decision(s)`);
-      }
-      if (insight.antipatterns_to_avoid.length > 0) {
-        parts.push(`${insight.antipatterns_to_avoid.length} anti-pattern(s) to avoid`);
-      }
-      if (insight.dependency_gotchas.length > 0) {
-        parts.push(`${insight.dependency_gotchas.length} dependency gotcha(s)`);
-      }
-      if (insight.stack_preferences.length > 0) {
-        parts.push(`${insight.stack_preferences.length} stack preference(s) from past projects`);
-      }
+      if (insight.patterns_to_use.length > 0) parts.push(`${insight.patterns_to_use.length} relevant pattern(s)`);
+      if (insight.decisions_made_before.length > 0) parts.push(`${insight.decisions_made_before.length} past decision(s)`);
+      if (insight.antipatterns_to_avoid.length > 0) parts.push(`${insight.antipatterns_to_avoid.length} anti-pattern(s) to avoid`);
+      if (insight.dependency_gotchas.length > 0) parts.push(`${insight.dependency_gotchas.length} dependency gotcha(s)`);
+      if (insight.stack_preferences.length > 0) parts.push(`${insight.stack_preferences.length} stack preference(s) from past projects`);
 
       insight.summary =
         parts.length > 0

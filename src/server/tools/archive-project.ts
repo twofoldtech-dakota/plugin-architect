@@ -1,10 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
-import type { Architecture, DecisionLog } from "../types/architecture.js";
-import { appendDecision } from "./log-decision.js";
+import { projectsRepo, decisionsRepo, patternsRepo, dependenciesRepo } from "../storage/index.js";
 
 export function registerArchiveProject(server: McpServer): void {
   server.tool(
@@ -15,65 +11,35 @@ export function registerArchiveProject(server: McpServer): void {
       reason: z.string().optional().describe("Reason for archiving"),
     },
     async ({ project, reason }) => {
-      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
-      const decisionsPath = join(HIVE_DIRS.projects, safeName(project), "decisions.yaml");
-
-      let architecture: Architecture;
-      try {
-        architecture = await readYaml<Architecture>(archPath);
-      } catch {
-        return {
-          content: [{ type: "text" as const, text: `Project "${project}" not found.` }],
-          isError: true,
-        };
+      const proj = projectsRepo.getBySlug(project);
+      if (!proj) {
+        return { content: [{ type: "text" as const, text: `Project "${project}" not found.` }], isError: true };
       }
 
-      if (architecture.status === "archived") {
-        return {
-          content: [{ type: "text" as const, text: `Project "${project}" is already archived.` }],
-          isError: true,
-        };
+      if (proj.architecture.status === "archived") {
+        return { content: [{ type: "text" as const, text: `Project "${project}" is already archived.` }], isError: true };
       }
 
       // Update architecture status
-      architecture.status = "archived";
-      architecture.updated = new Date().toISOString().split("T")[0];
-      await writeYaml(archPath, architecture);
+      const arch = proj.architecture;
+      arch.status = "archived";
+      projectsRepo.updateArchitecture(project, arch);
 
       // Log archival decision
-      let log: DecisionLog;
-      try {
-        log = await readYaml<DecisionLog>(decisionsPath);
-      } catch {
-        log = { decisions: [] };
-      }
-
-      appendDecision(log, {
+      decisionsRepo.create(proj.id, {
+        date: new Date().toISOString().split("T")[0],
         component: "project",
         decision: "Archive project",
         reasoning: reason ?? "Project archived by user",
+        alternatives_considered: [],
       });
-      await writeYaml(decisionsPath, log);
 
       // Count preserved knowledge
-      let patternsCount = 0;
-      try {
-        const indexPath = join(HIVE_DIRS.patterns, "index.yaml");
-        const index = await readYaml<{ patterns: Array<{ used_in?: string[] }> }>(indexPath);
-        patternsCount = index.patterns.filter((p) => p.used_in?.includes(project)).length;
-      } catch {
-        // No patterns index
-      }
-
-      const decisionsCount = log.decisions.length;
-
-      let depsCount = 0;
-      try {
-        const depDirs = await readdir(HIVE_DIRS.dependencies);
-        depsCount = depDirs.length;
-      } catch {
-        // No deps registered
-      }
+      const allPatterns = patternsRepo.list();
+      const patternsCount = allPatterns.filter((p) => p.used_in?.includes(project)).length;
+      const decisions = decisionsRepo.listByProject(proj.id);
+      const decisionsCount = decisions.length;
+      const depsCount = dependenciesRepo.list().length;
 
       const preservation = {
         patterns_extracted: patternsCount,
@@ -82,20 +48,14 @@ export function registerArchiveProject(server: McpServer): void {
       };
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                message: `Project "${project}" archived`,
-                reason: reason ?? "No reason provided",
-                knowledge_preserved: preservation,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            message: `Project "${project}" archived`,
+            reason: reason ?? "No reason provided",
+            knowledge_preserved: preservation,
+          }, null, 2),
+        }],
       };
     },
   );

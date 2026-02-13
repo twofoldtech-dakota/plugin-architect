@@ -1,21 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml, slugify } from "../storage/index.js";
-import type { Idea, Evaluation } from "../types/idea.js";
-import type { BuildPlan } from "../types/build-plan.js";
-
-type PipelineStep = "capture_idea" | "evaluate_idea" | "promote_idea" | "plan_build" | "execute";
-
-interface PipelineState {
-  description: string;
-  auto_approve: boolean;
-  current_step: PipelineStep;
-  idea_slug?: string;
-  project_slug?: string;
-  status: "in_progress" | "awaiting_approval" | "completed" | "failed";
-  error?: string;
-}
+import { slugify, ideasRepo, projectsRepo } from "../storage/index.js";
 
 export function registerBuildFromDescription(server: McpServer): void {
   server.tool(
@@ -34,7 +19,7 @@ export function registerBuildFromDescription(server: McpServer): void {
       const slug = slugify(description.slice(0, 60));
 
       // Step 1: Capture idea
-      const idea: Idea = {
+      const idea = ideasRepo.create({
         name: description.split(/\s+/).slice(0, 8).join(" "),
         slug,
         description,
@@ -46,38 +31,27 @@ export function registerBuildFromDescription(server: McpServer): void {
         status: "raw",
         created: now,
         updated: now,
-      };
-
-      const ideaPath = join(HIVE_DIRS.ideas, `${slug}.yaml`);
-      await writeYaml(ideaPath, idea);
+      });
 
       if (!auto_approve) {
         return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  pipeline_status: "awaiting_approval",
-                  current_step: "capture_idea",
-                  completed_step: "Idea captured",
-                  idea_slug: slug,
-                  idea,
-                  next_step: "evaluate_idea",
-                  instructions:
-                    'Idea has been captured. To continue the pipeline, run hive_evaluate_idea to evaluate it, then hive_promote_idea to create the project, then hive_plan_build to generate a build plan, then hive_execute_step to start building.',
-                },
-                null,
-                2,
-              ),
-            },
-          ],
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              pipeline_status: "awaiting_approval",
+              current_step: "capture_idea",
+              completed_step: "Idea captured",
+              idea_slug: slug,
+              idea,
+              next_step: "evaluate_idea",
+              instructions: 'Idea has been captured. To continue the pipeline, run hive_evaluate_idea to evaluate it, then hive_promote_idea to create the project, then hive_plan_build to generate a build plan, then hive_execute_step to start building.',
+            }, null, 2),
+          }],
         };
       }
 
-      // Auto-approve mode: run the full pipeline
-      // Step 2: Auto-evaluate (with sensible defaults)
-      const evaluation: Evaluation = {
+      // Auto-approve mode: evaluate and promote
+      ideasRepo.createEvaluation(idea.id!, {
         feasibility: {
           score: 3,
           has_patterns: false,
@@ -98,66 +72,50 @@ export function registerBuildFromDescription(server: McpServer): void {
         },
         verdict: "build",
         reasoning: "Auto-approved via build_from_description pipeline.",
-      };
+      });
 
-      idea.evaluation = evaluation;
-      idea.status = "evaluated";
-      idea.updated = now;
-      await writeYaml(ideaPath, idea);
+      ideasRepo.update(slug, { status: "approved", updated: now });
 
-      // Step 3: Promote to project
-      idea.status = "approved";
-      idea.updated = now;
-      await writeYaml(ideaPath, idea);
-
-      const projectDir = join(HIVE_DIRS.projects, slug);
-      const archPath = join(projectDir, "architecture.yaml");
-      const decisionsPath = join(projectDir, "decisions.yaml");
-      const apisPath = join(projectDir, "apis.yaml");
-
-      const architecture = {
-        project: slug,
+      // Create project
+      const project = projectsRepo.create({
+        slug,
+        name: slug,
         description,
-        created: now,
-        updated: now,
-        status: "active",
-        stack: {},
-        components: [
-          {
-            name: "core",
-            type: "module",
-            description: "Core application logic",
-            files: [],
-            dependencies: [],
-          },
-        ],
-        data_flows: [],
-        file_structure: {},
-      };
-
-      await writeYaml(archPath, architecture);
-      await writeYaml(decisionsPath, { decisions: [] });
-      await writeYaml(apisPath, { apis: [] });
+        status: "planning",
+        architecture: {
+          project: slug,
+          description,
+          created: now,
+          updated: now,
+          status: "planning",
+          stack: {},
+          components: [
+            {
+              name: "core",
+              type: "module",
+              description: "Core application logic",
+              files: [],
+              dependencies: [],
+            },
+          ],
+          data_flows: [],
+          file_structure: {},
+        },
+      });
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                pipeline_status: "ready_to_plan",
-                steps_completed: ["capture_idea", "evaluate_idea", "promote_idea"],
-                idea_slug: slug,
-                project_slug: slug,
-                project_created: true,
-                next_step: "plan_build",
-                instructions: `Project "${slug}" created. Run hive_plan_build with project="${slug}" to generate a build plan, then hive_execute_step to start building.`,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            pipeline_status: "ready_to_plan",
+            steps_completed: ["capture_idea", "evaluate_idea", "promote_idea"],
+            idea_slug: slug,
+            project_slug: project.slug,
+            project_created: true,
+            next_step: "plan_build",
+            instructions: `Project "${slug}" created. Run hive_plan_build with project="${slug}" to generate a build plan, then hive_execute_step to start building.`,
+          }, null, 2),
+        }],
       };
     },
   );

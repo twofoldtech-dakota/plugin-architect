@@ -1,125 +1,66 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml, safeName } from "../storage/index.js";
-import type { Decision, DecisionLog } from "../types/architecture.js";
-
-interface SurfacedDecision {
-  project: string;
-  decision: Decision;
-  relevance: "exact" | "related";
-  match_reason: string;
-}
+import { decisionsRepo, projectsRepo } from "../storage/index.js";
+import type { Decision } from "../types/architecture.js";
 
 function normalizeComponent(name: string): string[] {
-  // Split on common delimiters and lowercase for flexible matching
-  return name
-    .toLowerCase()
-    .split(/[\s_\-/]+/)
-    .filter((t) => t.length > 0);
+  return name.toLowerCase().split(/[\s_\-/]+/).filter((t) => t.length > 0);
 }
 
 export function registerSurfaceDecisions(server: McpServer): void {
   server.tool(
     "hive_surface_decisions",
-    "Surface relevant decisions from past projects for a given component. Useful when making a new decision — shows what was decided before and why.",
+    "Surface relevant decisions from past projects for a given component.",
     {
-      component: z.string().describe("Component name or type (e.g., 'auth', 'database', 'api-layer')"),
-      project: z.string().optional().describe("Exclude this project from results (typically the current project)"),
-      include_current: z.boolean().optional().describe("Include decisions from the current project too (default false)"),
+      component: z.string().describe("Component name or type"),
+      project: z.string().optional().describe("Exclude this project from results"),
+      include_current: z.boolean().optional().describe("Include decisions from the current project too"),
     },
     async ({ component, project, include_current }) => {
       const componentTerms = normalizeComponent(component);
+      const allDecisions = decisionsRepo.listAll();
+      const projects = projectsRepo.list();
+      const projectMap = new Map(projects.map((p) => [p.id, p.slug]));
 
-      let projectDirs: string[];
-      try {
-        projectDirs = await readdir(HIVE_DIRS.projects);
-      } catch {
-        return {
-          content: [{ type: "text" as const, text: "No projects found." }],
-        };
-      }
+      // Optionally find current project id to exclude
+      const currentProj = project ? projects.find((p) => p.slug === project) : undefined;
 
-      const results: SurfacedDecision[] = [];
+      const results: Array<{ project: string; decision: Decision & { project_id: string }; relevance: "exact" | "related"; match_reason: string }> = [];
 
-      for (const dir of projectDirs) {
-        // Skip current project unless explicitly included
-        if (dir === project && !include_current) continue;
+      for (const decision of allDecisions) {
+        const projSlug = projectMap.get(decision.project_id) ?? "unknown";
+        if (projSlug === project && !include_current) continue;
 
-        let log: DecisionLog;
-        try {
-          log = await readYaml<DecisionLog>(join(HIVE_DIRS.projects, dir, "decisions.yaml"));
-        } catch {
+        const decisionComponentTerms = normalizeComponent(decision.component);
+        const exactOverlap = componentTerms.some((t) => decisionComponentTerms.includes(t));
+        if (exactOverlap) {
+          results.push({ project: projSlug, decision, relevance: "exact", match_reason: `Component "${decision.component}" matches "${component}"` });
           continue;
         }
 
-        for (const decision of log.decisions) {
-          const decisionComponentTerms = normalizeComponent(decision.component);
-
-          // Exact match: component names overlap directly
-          const exactOverlap = componentTerms.some((t) => decisionComponentTerms.includes(t));
-
-          if (exactOverlap) {
-            results.push({
-              project: dir,
-              decision,
-              relevance: "exact",
-              match_reason: `Component "${decision.component}" matches "${component}"`,
-            });
-            continue;
-          }
-
-          // Related match: decision text or reasoning mentions the component
-          const decisionText = `${decision.decision} ${decision.reasoning}`.toLowerCase();
-          const relatedMatch = componentTerms.some((t) => decisionText.includes(t));
-
-          if (relatedMatch) {
-            results.push({
-              project: dir,
-              decision,
-              relevance: "related",
-              match_reason: `Decision mentions "${component}" in its text or reasoning`,
-            });
-          }
+        const decisionText = `${decision.decision} ${decision.reasoning}`.toLowerCase();
+        if (componentTerms.some((t) => decisionText.includes(t))) {
+          results.push({ project: projSlug, decision, relevance: "related", match_reason: `Decision mentions "${component}"` });
         }
       }
 
       if (results.length === 0) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `No past decisions found for component "${component}". This will be the first decision on this topic.`,
-            },
-          ],
-        };
+        return { content: [{ type: "text" as const, text: `No past decisions found for component "${component}".` }] };
       }
 
-      // Sort: exact matches first, then related
-      results.sort((a, b) => {
-        if (a.relevance === "exact" && b.relevance !== "exact") return -1;
-        if (a.relevance !== "exact" && b.relevance === "exact") return 1;
-        return 0;
-      });
+      results.sort((a, b) => (a.relevance === "exact" ? -1 : 1) - (b.relevance === "exact" ? -1 : 1));
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                component,
-                total_results: results.length,
-                exact_matches: results.filter((r) => r.relevance === "exact").length,
-                related_matches: results.filter((r) => r.relevance === "related").length,
-                decisions: results,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            component,
+            total_results: results.length,
+            exact_matches: results.filter((r) => r.relevance === "exact").length,
+            related_matches: results.filter((r) => r.relevance === "related").length,
+            decisions: results,
+          }, null, 2),
+        }],
       };
     },
   );

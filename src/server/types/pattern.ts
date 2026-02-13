@@ -11,6 +11,7 @@ export interface PatternLineageEntry {
 }
 
 export interface Pattern {
+  id?: string;
   name: string;
   slug: string;
   description: string;
@@ -23,14 +24,4 @@ export interface Pattern {
   notes?: string;
   version?: number;
   lineage?: PatternLineageEntry[];
-}
-
-export interface PatternIndexEntry {
-  slug: string;
-  name: string;
-  tags: string[];
-}
-
-export interface PatternIndex {
-  patterns: PatternIndexEntry[];
 }

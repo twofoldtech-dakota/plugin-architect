@@ -1,4 +1,5 @@
 export interface Antipattern {
+  id?: string;
   name: string;
   slug: string;
   description: string;
@@ -9,15 +10,4 @@ export interface Antipattern {
   severity: "critical" | "warning" | "minor";
   learned_from?: string;
   created: string;
-}
-
-export interface AntipatternIndexEntry {
-  slug: string;
-  name: string;
-  tags: string[];
-  severity: "critical" | "warning" | "minor";
-}
-
-export interface AntipatternIndex {
-  antipatterns: AntipatternIndexEntry[];
 }

@@ -1,9 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
-import type { Idea, Evaluation } from "../types/idea.js";
+import { ideasRepo } from "../storage/index.js";
 
 export function registerEvaluateIdea(server: McpServer): void {
   registerAppTool(
@@ -37,31 +35,16 @@ export function registerEvaluateIdea(server: McpServer): void {
       },
     },
     async ({ idea: slug, feasibility, competitive, scope, verdict, reasoning }) => {
-      const filePath = join(HIVE_DIRS.ideas, `${safeName(slug)}.yaml`);
-
-      let ideaData: Idea;
-      try {
-        ideaData = await readYaml<Idea>(filePath);
-      } catch {
+      const ideaData = ideasRepo.getBySlug(slug);
+      if (!ideaData) {
         return {
           content: [{ type: "text" as const, text: `Idea "${slug}" not found. Capture it first with hive_capture_idea.` }],
           isError: true,
         };
       }
 
-      const evaluation: Evaluation = {
-        feasibility,
-        competitive,
-        scope,
-        verdict,
-        reasoning,
-      };
-
-      ideaData.evaluation = evaluation;
-      ideaData.status = "evaluated";
-      ideaData.updated = new Date().toISOString().split("T")[0];
-
-      await writeYaml(filePath, ideaData);
+      ideasRepo.createEvaluation(ideaData.id!, { feasibility, competitive, scope, verdict, reasoning });
+      ideasRepo.update(slug, { status: "evaluated", updated: new Date().toISOString().split("T")[0] });
 
       return {
         content: [
@@ -73,9 +56,9 @@ export function registerEvaluateIdea(server: McpServer): void {
                 slug,
                 problem: ideaData.problem,
                 audience: ideaData.audience,
-                status: ideaData.status,
+                status: "evaluated",
               },
-              evaluation,
+              evaluation: { feasibility, competitive, scope, verdict, reasoning },
             }, null, 2),
           },
         ],

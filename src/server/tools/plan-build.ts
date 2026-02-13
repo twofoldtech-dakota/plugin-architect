@@ -1,34 +1,23 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
+import { projectsRepo, buildRepo } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
-import type { BuildPlan, BuildPhase, BuildTask } from "../types/build-plan.js";
+import type { BuildPhase, BuildTask } from "../types/build-plan.js";
 
 function makeTaskId(phaseIdx: number, taskIdx: number): string {
   return `p${phaseIdx + 1}t${taskIdx + 1}`;
 }
 
-/**
- * Derive a phased build plan from an architecture spec.
- *
- * Strategy: topological sort on component dependencies, then group into phases
- * where each phase contains components whose dependencies are all in earlier phases.
- */
 function derivePhases(architecture: Architecture): BuildPhase[] {
   const components = architecture.components;
   if (components.length === 0) return [];
 
-  // Build adjacency: component name → set of dependency names
   const depMap = new Map<string, Set<string>>();
-  const nameSet = new Set<string>();
   for (const c of components) {
-    nameSet.add(c.name);
     depMap.set(c.name, new Set(c.dependencies.filter((d) => components.some((cc) => cc.name === d))));
   }
 
-  // Kahn's algorithm to group into layers (phases)
   const layers: string[][] = [];
   const placed = new Set<string>();
 
@@ -42,7 +31,6 @@ function derivePhases(architecture: Architecture): BuildPhase[] {
       }
     }
 
-    // If no progress, break cycles by picking the first unplaced component
     if (layer.length === 0) {
       const unplaced = components.find((c) => !placed.has(c.name))!;
       layer.push(unplaced.name);
@@ -52,11 +40,9 @@ function derivePhases(architecture: Architecture): BuildPhase[] {
     for (const name of layer) placed.add(name);
   }
 
-  // Convert layers to BuildPhases
   return layers.map((layer, phaseIdx) => {
     const tasks: BuildTask[] = layer.map((name, taskIdx) => {
       const comp = components.find((c) => c.name === name)!;
-      // Depend on tasks in earlier phases that this component depends on
       const taskDeps: string[] = [];
       for (const dep of comp.dependencies) {
         for (let pi = 0; pi < phaseIdx; pi++) {
@@ -93,30 +79,22 @@ export function registerPlanBuild(server: McpServer): void {
     "hive_plan_build",
     "Take a product description and output a phased build plan with tasks, dependencies, and execution order. Requires an existing Hive project with an architecture spec.",
     {
-      project: z.string().describe("Project slug (must already have an architecture.yaml)"),
+      project: z.string().describe("Project slug (must already have an architecture)"),
       description: z.string().describe("Product description — what you want to build"),
     },
     async ({ project, description }) => {
-      const archPath = join(HIVE_DIRS.projects, safeName(project), "architecture.yaml");
-
-      let architecture: Architecture;
-      try {
-        architecture = await readYaml<Architecture>(archPath);
-      } catch {
+      const proj = projectsRepo.getBySlug(project);
+      if (!proj) {
         return {
-          content: [{ type: "text" as const, text: `Project "${project}" not found or missing architecture.yaml.` }],
+          content: [{ type: "text" as const, text: `Project "${project}" not found.` }],
           isError: true,
         };
       }
 
+      const architecture = proj.architecture;
       if (architecture.components.length === 0) {
         return {
-          content: [
-            {
-              type: "text" as const,
-              text: "Architecture has no components. Add components to the architecture before planning a build.",
-            },
-          ],
+          content: [{ type: "text" as const, text: "Architecture has no components. Add components to the architecture before planning a build." }],
           isError: true,
         };
       }
@@ -124,8 +102,7 @@ export function registerPlanBuild(server: McpServer): void {
       const phases = derivePhases(architecture);
       const now = new Date().toISOString().split("T")[0];
 
-      const plan: BuildPlan = {
-        project,
+      const plan = buildRepo.createPlan(proj.id, {
         description,
         created: now,
         updated: now,
@@ -133,16 +110,12 @@ export function registerPlanBuild(server: McpServer): void {
         current_phase: 0,
         phases,
         session_id: randomUUID(),
-      };
+      });
 
-      const planPath = join(HIVE_DIRS.projects, safeName(project), "build-plan.yaml");
-      await writeYaml(planPath, plan);
-
-      // Summarize for the caller
       const totalTasks = phases.reduce((sum, p) => sum + p.tasks.length, 0);
       const summary = {
         message: `Build plan created with ${phases.length} phases and ${totalTasks} tasks.`,
-        plan_path: planPath,
+        plan_id: plan.id,
         phases: phases.map((p) => ({
           id: p.id,
           name: p.name,

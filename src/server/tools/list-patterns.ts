@@ -1,7 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { PatternIndex } from "../types/pattern.js";
+import { patternsRepo } from "../storage/index.js";
 
 export function registerListPatterns(server: McpServer): void {
   server.tool(
@@ -9,28 +7,25 @@ export function registerListPatterns(server: McpServer): void {
     "List all registered patterns with their tags",
     {},
     async () => {
-      const indexPath = join(HIVE_DIRS.patterns, "index.yaml");
+      const patterns = patternsRepo.list();
 
-      let index: PatternIndex;
-      try {
-        index = await readYaml<PatternIndex>(indexPath);
-      } catch {
+      if (patterns.length === 0) {
         return {
           content: [{ type: "text" as const, text: "No patterns registered yet." }],
         };
       }
 
-      if (index.patterns.length === 0) {
-        return {
-          content: [{ type: "text" as const, text: "No patterns registered yet." }],
-        };
-      }
+      const summaries = patterns.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        tags: p.tags,
+      }));
 
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(index.patterns, null, 2),
+            text: JSON.stringify(summaries, null, 2),
           },
         ],
       };

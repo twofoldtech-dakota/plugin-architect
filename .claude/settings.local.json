@@ -7,7 +7,14 @@
       "Bash(do grep -o '\"\"hive_[^\"\"]*\"\"' \"$f\")",
       "Bash(done)",
       "Bash(grep:*)",
-      "Bash(npm run build:ui:*)"
+      "Bash(npm run build:ui:*)",
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:server:*)",
+      "Bash(git remote:*)",
+      "Bash(git config:*)",
+      "Bash(git rm:*)",
+      "Bash(npm uninstall build npm run)"
     ]
   }
 }

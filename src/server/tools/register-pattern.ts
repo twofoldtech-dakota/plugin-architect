@@ -1,8 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml, slugify } from "../storage/index.js";
-import type { Pattern, PatternIndex } from "../types/pattern.js";
+import { slugify, patternsRepo } from "../storage/index.js";
 
 export function registerRegisterPattern(server: McpServer): void {
   server.tool(
@@ -26,7 +24,7 @@ export function registerRegisterPattern(server: McpServer): void {
       const slug = slugify(name);
       const now = new Date().toISOString().split("T")[0];
 
-      const pattern: Pattern = {
+      patternsRepo.upsert({
         name,
         slug,
         description,
@@ -36,24 +34,7 @@ export function registerRegisterPattern(server: McpServer): void {
         used_in: [],
         files,
         notes,
-      };
-
-      await writeYaml(join(HIVE_DIRS.patterns, `${slug}.yaml`), pattern);
-
-      // Update pattern index
-      const indexPath = join(HIVE_DIRS.patterns, "index.yaml");
-      let index: PatternIndex;
-      try {
-        index = await readYaml<PatternIndex>(indexPath);
-      } catch {
-        index = { patterns: [] };
-      }
-
-      // Remove existing entry if re-registering
-      index.patterns = index.patterns.filter((p) => p.slug !== slug);
-      index.patterns.push({ slug, name, tags });
-
-      await writeYaml(indexPath, index);
+      });
 
       return {
         content: [

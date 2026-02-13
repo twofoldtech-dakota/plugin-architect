@@ -1,8 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
-import type { BacklogConfig, BacklogItem } from "../types/lifecycle.js";
+import { projectsRepo, businessRepo } from "../storage/index.js";
 
 export function registerAddToBacklog(server: McpServer): void {
   server.tool(
@@ -17,39 +15,25 @@ export function registerAddToBacklog(server: McpServer): void {
       source: z.string().optional().describe("Where this item came from (e.g., 'health_check', 'user_report')"),
     },
     async ({ project, type, title, description, priority, source }) => {
-      const backlogPath = join(HIVE_DIRS.projects, safeName(project), "backlog.yaml");
-
-      let config: BacklogConfig;
-      try {
-        config = await readYaml<BacklogConfig>(backlogPath);
-      } catch {
-        config = { items: [] };
+      const proj = projectsRepo.getBySlug(project);
+      if (!proj) {
+        return { content: [{ type: "text" as const, text: `Project "${project}" not found.` }], isError: true };
       }
 
-      const nextId = `bl-${String(config.items.length + 1).padStart(3, "0")}`;
-      const now = new Date().toISOString().split("T")[0];
-
-      const item: BacklogItem = {
-        id: nextId,
+      const item = businessRepo.addBacklogItem(proj.id, {
         type,
         title,
         description,
         priority,
         status: "open",
         source,
-        created: now,
-      };
-
-      config.items.push(item);
-      await writeYaml(backlogPath, config);
+      });
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({ message: `Backlog item ${nextId} created`, item }, null, 2),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ message: `Backlog item ${item.id} created`, item }, null, 2),
+        }],
       };
     },
   );

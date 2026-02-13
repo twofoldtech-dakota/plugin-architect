@@ -14,30 +14,20 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 
-/** View name → resource URI */
 const VIEWS = [
   "idea-scorecard",
   "idea-kanban",
   "architecture-viewer",
   "pattern-gallery",
-  "progress-dashboard",
-  "feature-evaluator",
-  "scaffold-preview",
   "search-results",
 ] as const;
 
 export type ViewName = (typeof VIEWS)[number];
 
-/** Resolve the dist directory relative to this compiled file. */
 function distDir(): string {
-  // In compiled form: dist/server/ui-resources.js → dist/ui/views
   return join(dirname(fileURLToPath(import.meta.url)), "..", "ui", "views");
 }
 
-/**
- * Register all bundled view HTML files as MCP App resources.
- * Views that haven't been bundled yet are silently skipped.
- */
 export function registerUiResources(server: McpServer): void {
   const base = distDir();
 

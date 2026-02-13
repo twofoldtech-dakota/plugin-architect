@@ -1,4 +1,5 @@
 export interface Idea {
+  id?: string;
   name: string;
   slug: string;
   description: string;
@@ -8,12 +9,19 @@ export interface Idea {
   assumptions: string[];
   open_questions: string[];
   status: "raw" | "evaluated" | "approved" | "rejected" | "parked";
+  competitive_landscape?: string;
+  market_data?: string;
+  research_links?: string;
+  signals?: string;
+  skill_fit?: string;
   created: string;
   updated: string;
   evaluation?: Evaluation;
 }
 
 export interface Evaluation {
+  id?: string;
+  idea_id?: string;
   feasibility: {
     score: number;
     has_patterns: boolean;
@@ -34,4 +42,5 @@ export interface Evaluation {
   };
   verdict: "build" | "park" | "kill" | "needs_more_thinking";
   reasoning: string;
+  created?: string;
 }

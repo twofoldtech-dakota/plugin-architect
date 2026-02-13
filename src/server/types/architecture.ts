@@ -31,6 +31,7 @@ export interface Architecture {
 
 export interface Decision {
   id: string;
+  project_id?: string;
   date: string;
   component: string;
   decision: string;
@@ -41,25 +42,4 @@ export interface Decision {
 
 export interface DecisionLog {
   decisions: Decision[];
-}
-
-export interface ApiEndpoint {
-  method: string;
-  path: string;
-  body?: Record<string, string>;
-  response?: Record<string, string>;
-  errors?: Array<{ status: number; message: string }>;
-  docs?: string;
-}
-
-export interface ApiContract {
-  name: string;
-  type?: "internal" | "external";
-  base: string;
-  auth?: string;
-  endpoints: ApiEndpoint[];
-}
-
-export interface ApiRegistry {
-  apis: ApiContract[];
 }

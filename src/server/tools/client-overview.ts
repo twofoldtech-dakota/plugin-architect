@@ -1,22 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { readdir } from "node:fs/promises";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { ClientProfile, InvoiceStore } from "../types/business.js";
-
-async function safeRead<T>(path: string): Promise<T | null> {
-  try {
-    return await readYaml<T>(path);
-  } catch {
-    return null;
-  }
-}
+import { businessRepo } from "../storage/index.js";
 
 export function registerClientOverview(server: McpServer): void {
   server.tool(
     "hive_client_overview",
-    "Get an overview of all clients with billing status, active projects, outstanding invoices, and contract status.",
+    "Get an overview of all clients with billing status, active projects, and outstanding invoices.",
     {
       status: z
         .enum(["active", "inactive", "all"])
@@ -25,47 +14,24 @@ export function registerClientOverview(server: McpServer): void {
         .describe("Filter by client status"),
     },
     async ({ status }) => {
-      let clientFiles: string[];
-      try {
-        clientFiles = (await readdir(HIVE_DIRS.businessClients)).filter((f) => f.endsWith(".yaml"));
-      } catch {
+      const allClients = businessRepo.listClients();
+
+      if (allClients.length === 0) {
         return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  message: "No clients found.",
-                  setup: {
-                    message: "Create client profiles in ~/.hive/business/clients/",
-                    example: {
-                      slug: "acme-corp",
-                      name: "Acme Corporation",
-                      contact: { email: "billing@acme.com", company: "Acme Corp" },
-                      billing: { rate: 150, rate_type: "hourly", terms: "net-30", currency: "USD", total_invoiced: 0, total_paid: 0 },
-                      projects: ["project-alpha"],
-                      contracts: [],
-                      status: "active",
-                      created: new Date().toISOString().split("T")[0],
-                    },
-                  },
-                },
-                null,
-                2,
-              ),
-            },
-          ],
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              message: "No clients found.",
+              setup: {
+                message: "Clients can be created programmatically when generating invoices.",
+              },
+            }, null, 2),
+          }],
         };
       }
 
-      // Load invoice store for cross-referencing
-      const storePath = join(HIVE_DIRS.businessInvoices, "store.yaml");
-      const invoiceStore = await safeRead<InvoiceStore>(storePath);
+      const allInvoices = businessRepo.listInvoices();
       const today = new Date().toISOString().split("T")[0];
-
-      // Load contract store
-      const contractStorePath = join(HIVE_DIRS.businessContractGenerated, "store.yaml");
-      const contractStore = await safeRead<{ contracts: Array<{ client?: string; status: string }> }>(contractStorePath);
 
       const clients: Array<{
         slug: string;
@@ -77,50 +43,30 @@ export function registerClientOverview(server: McpServer): void {
         outstanding: number;
         overdue: number;
         last_invoice?: string;
-        contract_status: string;
       }> = [];
 
-      for (const file of clientFiles) {
-        const slug = file.replace(".yaml", "");
-        const client = await safeRead<ClientProfile>(join(HIVE_DIRS.businessClients, file));
-        if (!client) continue;
-
-        // Apply status filter
+      for (const client of allClients) {
         if (status !== "all" && client.status !== status) continue;
 
-        // Compute invoice stats for this client
         let outstanding = 0;
         let overdue = 0;
         let lastInvoiceDate: string | undefined;
 
-        if (invoiceStore) {
-          const clientInvoices = invoiceStore.invoices.filter((inv) => inv.client === slug);
-          for (const inv of clientInvoices) {
-            if (inv.status === "sent" || inv.status === "overdue") {
-              outstanding += inv.total;
-              if (inv.due_date && inv.due_date < today) {
-                overdue += inv.total;
-              }
-            }
-            if (!lastInvoiceDate || inv.date > lastInvoiceDate) {
-              lastInvoiceDate = inv.date;
+        const clientInvoices = allInvoices.filter((inv) => inv.client_id === client.id);
+        for (const inv of clientInvoices) {
+          if (inv.status === "sent" || inv.status === "overdue") {
+            outstanding += inv.total;
+            if (inv.due_date && inv.due_date < today) {
+              overdue += inv.total;
             }
           }
-        }
-
-        // Contract status
-        let contractStatus = "none";
-        if (contractStore) {
-          const clientContracts = contractStore.contracts.filter((c) => c.client === slug);
-          if (clientContracts.length > 0) {
-            const hasSigned = clientContracts.some((c) => c.status === "signed");
-            const hasDraft = clientContracts.some((c) => c.status === "draft");
-            contractStatus = hasSigned ? "signed" : hasDraft ? "draft" : "sent";
+          if (!lastInvoiceDate || inv.date > lastInvoiceDate) {
+            lastInvoiceDate = inv.date;
           }
         }
 
         clients.push({
-          slug,
+          slug: client.slug,
           name: client.name,
           status: client.status,
           active_projects: client.projects.length,
@@ -129,14 +75,11 @@ export function registerClientOverview(server: McpServer): void {
           outstanding: Math.round(outstanding * 100) / 100,
           overdue: Math.round(overdue * 100) / 100,
           last_invoice: lastInvoiceDate,
-          contract_status: contractStatus,
         });
       }
 
-      // Sort by outstanding (highest first)
       clients.sort((a, b) => b.outstanding - a.outstanding);
 
-      // Summary
       const summary = {
         total_clients: clients.length,
         active: clients.filter((c) => c.status === "active").length,
@@ -146,12 +89,7 @@ export function registerClientOverview(server: McpServer): void {
       };
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({ clients, summary }, null, 2),
-          },
-        ],
+        content: [{ type: "text" as const, text: JSON.stringify({ clients, summary }, null, 2) }],
       };
     },
   );

@@ -1,13 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, writeYaml, slugify } from "../storage/index.js";
-import type { Idea } from "../types/idea.js";
+import { slugify, ideasRepo } from "../storage/index.js";
 
 export function registerCaptureIdea(server: McpServer): void {
   server.tool(
     "hive_capture_idea",
-    "Capture a raw idea and structure it into an evaluable concept. Saves to ~/.hive/ideas/{slug}.yaml",
+    "Capture a raw idea and structure it into an evaluable concept. Saves to SQLite database.",
     {
       description: z.string().describe("Raw brain dump of the idea"),
       name: z.string().optional().describe("Short name for the idea (used as slug). Defaults to first few words of description."),
@@ -22,7 +20,7 @@ export function registerCaptureIdea(server: McpServer): void {
       const slug = slugify(shortName);
       const now = new Date().toISOString().split("T")[0];
 
-      const idea: Idea = {
+      const idea = ideasRepo.create({
         name: shortName,
         slug,
         description,
@@ -34,10 +32,7 @@ export function registerCaptureIdea(server: McpServer): void {
         status: "raw",
         created: now,
         updated: now,
-      };
-
-      const filePath = join(HIVE_DIRS.ideas, `${slug}.yaml`);
-      await writeYaml(filePath, idea);
+      });
 
       return {
         content: [

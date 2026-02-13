@@ -18,6 +18,7 @@ export interface CommonPattern {
 }
 
 export interface DependencySurface {
+  id?: string;
   name: string;
   version: string;
   exports?: DependencyExport[];

@@ -1,8 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, writeYaml, safeName } from "../storage/index.js";
-import type { DependencyMeta, DependencySurface } from "../types/dependency.js";
+import { dependenciesRepo } from "../storage/index.js";
 
 export function registerRegisterDependency(server: McpServer): void {
   server.tool(
@@ -30,30 +28,16 @@ export function registerRegisterDependency(server: McpServer): void {
           .describe("Common usage patterns"),
         gotchas: z.array(z.string()).optional().describe("Known gotchas and pitfalls"),
       }),
-      source: z.string().optional().describe("Documentation URL"),
     },
-    async ({ name, version, surface, source }) => {
-      const depDir = join(HIVE_DIRS.dependencies, safeName(name));
-      const now = new Date().toISOString().split("T")[0];
-
-      const meta: DependencyMeta = {
-        name,
-        version,
-        fetched: now,
-        source,
-      };
-
-      const surfaceData: DependencySurface = {
+    async ({ name, version, surface }) => {
+      dependenciesRepo.upsert({
         name,
         version,
         exports: surface.exports,
         column_types: surface.column_types,
         common_patterns: surface.common_patterns,
         gotchas: surface.gotchas,
-      };
-
-      await writeYaml(join(depDir, "meta.yaml"), meta);
-      await writeYaml(join(depDir, "surface.yaml"), surfaceData);
+      });
 
       return {
         content: [

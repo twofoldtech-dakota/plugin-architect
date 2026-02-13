@@ -1,13 +1,3 @@
-// ---- Business Entity ----
-
-export interface BusinessEntity {
-  name: string;
-  type: string;
-  state?: string;
-  address?: string;
-  payment_methods?: string[];
-}
-
 // ---- Clients ----
 
 export interface ClientBilling {
@@ -20,6 +10,7 @@ export interface ClientBilling {
 }
 
 export interface ClientProfile {
+  id?: string;
   slug: string;
   name: string;
   contact?: {
@@ -47,6 +38,7 @@ export interface InvoiceLineItem {
 export interface Invoice {
   id: string;
   client: string;
+  client_id?: string;
   project?: string;
   date: string;
   due_date?: string;
@@ -60,35 +52,6 @@ export interface Invoice {
   notes?: string;
   created: string;
   updated?: string;
-}
-
-export interface InvoiceStore {
-  invoices: Invoice[];
-}
-
-// ---- Contracts ----
-
-export interface ContractTemplate {
-  type: string;
-  name: string;
-  content: string;
-  variables: string[];
-}
-
-export interface GeneratedContract {
-  id: string;
-  type: string;
-  client?: string;
-  project?: string;
-  content: string;
-  variables_used: Record<string, string>;
-  review_notes: string[];
-  status: "draft" | "sent" | "signed" | "expired";
-  created: string;
-}
-
-export interface ContractStore {
-  contracts: GeneratedContract[];
 }
 
 // ---- Expenses ----
@@ -111,44 +74,4 @@ export interface ExpenseEntry {
   project?: string;
   recurring?: boolean;
   note?: string;
-}
-
-export interface MonthlyExpenses {
-  month: string;
-  entries: ExpenseEntry[];
-  totals: {
-    total: number;
-    by_category: Record<string, number>;
-  };
-}
-
-// ---- Compliance ----
-
-export interface ComplianceIssue {
-  project: string;
-  category: string;
-  severity: "critical" | "warning" | "info";
-  description: string;
-  fix: string;
-  auto_fixable: boolean;
-}
-
-export interface ComplianceAudit {
-  last_scan: string;
-  scanned: number;
-  issues: ComplianceIssue[];
-  compliant: string[];
-}
-
-// ---- Tax ----
-
-export interface TaxSummary {
-  year: number;
-  total_revenue: number;
-  total_expenses: number;
-  deductible_expenses: number;
-  taxable_income: number;
-  estimated_liability: number;
-  quarterly_payments: number[];
-  notes: string[];
 }

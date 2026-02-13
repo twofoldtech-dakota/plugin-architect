@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { Architecture, DecisionLog, ApiRegistry } from "../types/architecture.js";
+import { projectsRepo, decisionsRepo } from "../storage/index.js";
+import type { Architecture } from "../types/architecture.js";
 
 interface ProjectSnapshot {
   project: string;
@@ -12,7 +11,6 @@ interface ProjectSnapshot {
   component_count: number;
   components: string[];
   decision_count: number;
-  api_count: number;
 }
 
 interface Comparison {
@@ -33,24 +31,7 @@ interface Comparison {
   summary: string;
 }
 
-async function loadProject(slug: string): Promise<{
-  arch: Architecture;
-  decisions: DecisionLog;
-  apis: ApiRegistry;
-} | null> {
-  try {
-    const [arch, decisions, apis] = await Promise.all([
-      readYaml<Architecture>(join(HIVE_DIRS.projects, slug, "architecture.yaml")),
-      readYaml<DecisionLog>(join(HIVE_DIRS.projects, slug, "decisions.yaml")).catch(() => ({ decisions: [] })),
-      readYaml<ApiRegistry>(join(HIVE_DIRS.projects, slug, "apis.yaml")).catch(() => ({ apis: [] })),
-    ]);
-    return { arch, decisions, apis };
-  } catch {
-    return null;
-  }
-}
-
-function toSnapshot(arch: Architecture, decisions: DecisionLog, apis: ApiRegistry): ProjectSnapshot {
+function toSnapshot(arch: Architecture, decisionCount: number): ProjectSnapshot {
   return {
     project: arch.project,
     description: arch.description,
@@ -58,41 +39,38 @@ function toSnapshot(arch: Architecture, decisions: DecisionLog, apis: ApiRegistr
     stack: arch.stack,
     component_count: arch.components.length,
     components: arch.components.map((c) => c.name),
-    decision_count: decisions.decisions.length,
-    api_count: apis.apis.length,
+    decision_count: decisionCount,
   };
 }
 
 export function registerCompareProjects(server: McpServer): void {
   server.tool(
     "hive_compare_projects",
-    "Side-by-side comparison of two projects — stacks, components, decisions, and APIs. Useful for understanding differences and shared patterns between projects.",
+    "Side-by-side comparison of two projects — stacks, components, and decisions. Useful for understanding differences and shared patterns between projects.",
     {
       project_a: z.string().describe("First project slug"),
       project_b: z.string().describe("Second project slug"),
     },
     async ({ project_a, project_b }) => {
-      const [dataA, dataB] = await Promise.all([loadProject(project_a), loadProject(project_b)]);
+      const projA = projectsRepo.getBySlug(project_a);
+      const projB = projectsRepo.getBySlug(project_b);
 
-      if (!dataA) {
-        return {
-          content: [{ type: "text" as const, text: `Project "${project_a}" not found.` }],
-          isError: true,
-        };
+      if (!projA) {
+        return { content: [{ type: "text" as const, text: `Project "${project_a}" not found.` }], isError: true };
       }
-      if (!dataB) {
-        return {
-          content: [{ type: "text" as const, text: `Project "${project_b}" not found.` }],
-          isError: true,
-        };
+      if (!projB) {
+        return { content: [{ type: "text" as const, text: `Project "${project_b}" not found.` }], isError: true };
       }
 
-      const snapA = toSnapshot(dataA.arch, dataA.decisions, dataA.apis);
-      const snapB = toSnapshot(dataB.arch, dataB.decisions, dataB.apis);
+      const decisionsA = decisionsRepo.listByProject(projA.id);
+      const decisionsB = decisionsRepo.listByProject(projB.id);
+
+      const snapA = toSnapshot(projA.architecture, decisionsA.length);
+      const snapB = toSnapshot(projB.architecture, decisionsB.length);
 
       // Stack comparison
-      const stackA = Object.entries(dataA.arch.stack);
-      const stackB = Object.entries(dataB.arch.stack);
+      const stackA = Object.entries(projA.architecture.stack);
+      const stackB = Object.entries(projB.architecture.stack);
       const stackAKeys = new Set(stackA.map(([k]) => k));
       const stackBKeys = new Set(stackB.map(([k]) => k));
       const stackAValues = new Set(stackA.map(([, v]) => v.toLowerCase()));
@@ -109,8 +87,8 @@ export function registerCompareProjects(server: McpServer): void {
         .map(([k, v]) => `${k}:${v}`);
 
       // Component comparison
-      const compANames = new Set(dataA.arch.components.map((c) => c.name.toLowerCase()));
-      const compBNames = new Set(dataB.arch.components.map((c) => c.name.toLowerCase()));
+      const compANames = new Set(projA.architecture.components.map((c) => c.name.toLowerCase()));
+      const compBNames = new Set(projB.architecture.components.map((c) => c.name.toLowerCase()));
       const componentOverlap = [...compANames].filter((n) => compBNames.has(n));
       const componentsAOnly = [...compANames].filter((n) => !compBNames.has(n));
       const componentsBOnly = [...compBNames].filter((n) => !compANames.has(n));
@@ -118,22 +96,16 @@ export function registerCompareProjects(server: McpServer): void {
       // Decision comparison by component
       const decisionComparison: Comparison["decision_comparison"] = [];
       const allComponents = new Set([
-        ...dataA.decisions.decisions.map((d) => d.component.toLowerCase()),
-        ...dataB.decisions.decisions.map((d) => d.component.toLowerCase()),
+        ...decisionsA.map((d) => d.component.toLowerCase()),
+        ...decisionsB.map((d) => d.component.toLowerCase()),
       ]);
 
       for (const comp of allComponents) {
-        const aDecision = dataA.decisions.decisions.find(
-          (d) => d.component.toLowerCase() === comp,
-        );
-        const bDecision = dataB.decisions.decisions.find(
-          (d) => d.component.toLowerCase() === comp,
-        );
-
+        const aDecision = decisionsA.find((d) => d.component.toLowerCase() === comp);
+        const bDecision = decisionsB.find((d) => d.component.toLowerCase() === comp);
         const aText = aDecision?.decision ?? null;
         const bText = bDecision?.decision ?? null;
 
-        // Simple same-choice check
         let sameChoice = false;
         if (aText && bText) {
           const aTerms = aText.toLowerCase().split(/\s+/);
@@ -147,16 +119,10 @@ export function registerCompareProjects(server: McpServer): void {
 
       // Build summary
       const summaryParts: string[] = [];
-      if (stackOverlap.length > 0) {
-        summaryParts.push(`${stackOverlap.length} shared stack choice(s)`);
-      }
-      if (componentOverlap.length > 0) {
-        summaryParts.push(`${componentOverlap.length} shared component(s)`);
-      }
+      if (stackOverlap.length > 0) summaryParts.push(`${stackOverlap.length} shared stack choice(s)`);
+      if (componentOverlap.length > 0) summaryParts.push(`${componentOverlap.length} shared component(s)`);
       const sameDecisions = decisionComparison.filter((d) => d.same_choice).length;
-      if (sameDecisions > 0) {
-        summaryParts.push(`${sameDecisions} similar decision(s)`);
-      }
+      if (sameDecisions > 0) summaryParts.push(`${sameDecisions} similar decision(s)`);
 
       const summary =
         summaryParts.length > 0

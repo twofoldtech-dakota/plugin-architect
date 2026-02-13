@@ -1,10 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml } from "../storage/index.js";
-import type { Idea } from "../types/idea.js";
+import { ideasRepo } from "../storage/index.js";
 
 export function registerListIdeas(server: McpServer): void {
   registerAppTool(
@@ -21,54 +18,7 @@ export function registerListIdeas(server: McpServer): void {
       },
     },
     async ({ status }) => {
-      let files: string[];
-      try {
-        files = await readdir(HIVE_DIRS.ideas);
-      } catch {
-        return {
-          content: [{ type: "text" as const, text: "No ideas found." }],
-        };
-      }
-
-      const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
-
-      if (yamlFiles.length === 0) {
-        return {
-          content: [{ type: "text" as const, text: "No ideas found." }],
-        };
-      }
-
-      const ideas: Array<{
-        name: string;
-        slug: string;
-        status: string;
-        problem: string;
-        audience?: string;
-        verdict?: string;
-        feasibility_score?: number;
-        estimated_sessions?: number;
-        created: string;
-      }> = [];
-
-      for (const file of yamlFiles) {
-        try {
-          const idea = await readYaml<Idea>(join(HIVE_DIRS.ideas, file));
-          if (status && idea.status !== status) continue;
-          ideas.push({
-            name: idea.name,
-            slug: idea.slug,
-            status: idea.status,
-            problem: idea.problem,
-            audience: idea.audience,
-            verdict: idea.evaluation?.verdict,
-            feasibility_score: idea.evaluation?.feasibility?.score,
-            estimated_sessions: idea.evaluation?.feasibility?.estimated_sessions,
-            created: idea.created,
-          });
-        } catch {
-          // Skip malformed files
-        }
-      }
+      const ideas = ideasRepo.list(status);
 
       if (ideas.length === 0) {
         return {
@@ -76,11 +26,26 @@ export function registerListIdeas(server: McpServer): void {
         };
       }
 
+      const summaries = ideas.map((idea) => {
+        const evaluation = ideasRepo.getEvaluation(idea.id!);
+        return {
+          name: idea.name,
+          slug: idea.slug,
+          status: idea.status,
+          problem: idea.problem,
+          audience: idea.audience,
+          verdict: evaluation?.verdict,
+          feasibility_score: evaluation?.feasibility?.score,
+          estimated_sessions: evaluation?.feasibility?.estimated_sessions,
+          created: idea.created,
+        };
+      });
+
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(ideas, null, 2),
+            text: JSON.stringify(summaries, null, 2),
           },
         ],
       };

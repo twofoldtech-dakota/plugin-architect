@@ -1,17 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { join } from "node:path";
-import { HIVE_DIRS, readYaml, writeYaml, safeName } from "../storage/index.js";
-import type { RevenueConfig, RevenueEntry } from "../types/fleet.js";
+import { businessRepo } from "../storage/index.js";
+import type { RevenueEntry } from "../storage/repos/business.js";
 
-function computeRevenueSummary(entries: RevenueEntry[]): RevenueConfig["summary"] {
+function computeRevenueSummary(entries: RevenueEntry[]) {
   if (entries.length === 0) {
-    return { mrr: 0, total: 0, customers: 0, trend: "flat" };
+    return { mrr: 0, total: 0, customers: 0, trend: "flat" as const };
   }
 
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
 
-  // MRR: sum of most recent month's entries
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const thisMonthEntries = entries.filter((e) => e.date.startsWith(thisMonth));
@@ -21,11 +19,9 @@ function computeRevenueSummary(entries: RevenueEntry[]): RevenueConfig["summary"
       ? entries[entries.length - 1].amount
       : 0;
 
-  // Customers: latest entry with customer count, or unique sources
   const latestWithCustomers = [...entries].reverse().find((e) => e.customers != null);
   const customers = latestWithCustomers?.customers ?? 0;
 
-  // Trend: compare last 2 months
   const lastMonth = new Date(now);
   lastMonth.setMonth(lastMonth.getMonth() - 1);
   const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
@@ -67,15 +63,6 @@ export function registerTrackRevenue(server: McpServer): void {
         .describe("Time period for query (default: all)"),
     },
     async ({ project, action, entry, period }) => {
-      const revenuePath = join(HIVE_DIRS.revenue, `${safeName(project)}.yaml`);
-
-      let config: RevenueConfig;
-      try {
-        config = await readYaml<RevenueConfig>(revenuePath);
-      } catch {
-        config = { entries: [] };
-      }
-
       if (action === "add") {
         if (!entry) {
           return {
@@ -84,64 +71,42 @@ export function registerTrackRevenue(server: McpServer): void {
           };
         }
 
-        const newEntry: RevenueEntry = {
+        const newEntry = businessRepo.addRevenue({
+          project,
           date: entry.date ?? new Date().toISOString().split("T")[0],
           amount: entry.amount,
           customers: entry.customers,
           source: entry.source,
-        };
+        });
 
-        config.entries.push(newEntry);
-        config.summary = computeRevenueSummary(config.entries);
-        await writeYaml(revenuePath, config);
+        const allEntries = businessRepo.listRevenue(project);
+        const summary = computeRevenueSummary(allEntries);
 
         return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  message: `Revenue entry added for "${project}"`,
-                  entry: newEntry,
-                  summary: config.summary,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({ message: `Revenue entry added for "${project}"`, entry: newEntry, summary }, null, 2),
+          }],
         };
       }
 
       // Query action
-      let filtered = config.entries;
+      let since: string | undefined;
       if (period !== "all") {
         const months = parseInt(period.replace("m", ""), 10);
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - months);
-        const cutoffStr = cutoff.toISOString().split("T")[0];
-        filtered = config.entries.filter((e) => e.date >= cutoffStr);
+        since = cutoff.toISOString().split("T")[0];
       }
 
-      // Recompute summary from filtered entries
-      const summary = computeRevenueSummary(filtered);
+      const entries = businessRepo.listRevenue(project, since);
+      const summary = computeRevenueSummary(entries);
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                project,
-                period,
-                entries: filtered,
-                summary,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ project, period, entries, summary }, null, 2),
+        }],
       };
     },
   );
