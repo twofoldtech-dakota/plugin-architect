@@ -1,4 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { HiveConfig } from "../config.js";
+import { isCategoryEnabled } from "../config.js";
 
 // Discovery
 import { registerCaptureIdea } from "./capture-idea.js";
@@ -71,76 +73,90 @@ import { registerCaptureWorkflow } from "./capture-workflow.js";
 import { registerListWorkflow } from "./list-workflow.js";
 import { registerExportWorkflow } from "./export-workflow.js";
 
-/** Register all Hive tools on the MCP server. */
-export function registerAllTools(server: McpServer): void {
-  // Discovery
-  registerCaptureIdea(server);
-  registerEvaluateIdea(server);
-  registerListIdeas(server);
-  registerPromoteIdea(server);
+/** Register Hive tools on the MCP server, filtered by config categories. */
+export function registerAllTools(server: McpServer, config: HiveConfig): void {
+  const on = (cat: Parameters<typeof isCategoryEnabled>[1]) =>
+    isCategoryEnabled(config, cat);
 
-  // Foundation
-  registerInitProject(server);
-  registerGetArchitecture(server);
-  registerUpdateArchitecture(server);
-  registerLogDecision(server);
-  registerRegisterPattern(server);
-  registerFindPatterns(server);
-  registerListProjects(server);
-  registerListPatterns(server);
-  registerRegisterDependency(server);
-  registerCheckDependency(server);
+  if (on("discovery")) {
+    registerCaptureIdea(server);
+    registerEvaluateIdea(server);
+    registerListIdeas(server);
+    registerPromoteIdea(server);
+  }
 
-  // Validation
-  registerValidateAgainstSpec(server);
-  registerValidateCode(server);
-  registerCheckProgress(server);
-  registerEvaluateFeature(server);
+  if (on("foundation")) {
+    registerInitProject(server);
+    registerGetArchitecture(server);
+    registerUpdateArchitecture(server);
+    registerLogDecision(server);
+    registerRegisterPattern(server);
+    registerFindPatterns(server);
+    registerListProjects(server);
+    registerListPatterns(server);
+    registerRegisterDependency(server);
+    registerCheckDependency(server);
+  }
 
-  // Acceleration
-  registerAddFeature(server);
-  registerSnapshotPatterns(server);
-  registerSearchKnowledge(server);
+  if (on("validation")) {
+    registerValidateAgainstSpec(server);
+    registerValidateCode(server);
+    registerCheckProgress(server);
+    registerEvaluateFeature(server);
+  }
 
-  // Intelligence
-  registerSuggestPatterns(server);
-  registerDetectDrift(server);
-  registerSurfaceDecisions(server);
-  registerCheckStaleness(server);
-  registerScorePatterns(server);
+  if (on("acceleration")) {
+    registerAddFeature(server);
+    registerSnapshotPatterns(server);
+    registerSearchKnowledge(server);
+  }
 
-  // Cross-Project
-  registerPatternLineage(server);
-  registerDecisionGraph(server);
-  registerRegisterAntipattern(server);
-  registerScoreSimilarity(server);
-  registerGetInsights(server);
-  registerCompareProjects(server);
+  if (on("intelligence")) {
+    registerSuggestPatterns(server);
+    registerDetectDrift(server);
+    registerSurfaceDecisions(server);
+    registerCheckStaleness(server);
+    registerScorePatterns(server);
+  }
 
-  // Build Agent
-  registerPlanBuild(server);
-  registerExecuteStep(server);
-  registerReviewCheckpoint(server);
-  registerResumeBuild(server);
-  registerRollbackStep(server);
+  if (on("cross-project")) {
+    registerPatternLineage(server);
+    registerDecisionGraph(server);
+    registerRegisterAntipattern(server);
+    registerScoreSimilarity(server);
+    registerGetInsights(server);
+    registerCompareProjects(server);
+  }
 
-  // Project Management
-  registerAddToBacklog(server);
-  registerGetBacklog(server);
-  registerArchiveProject(server);
+  if (on("build")) {
+    registerPlanBuild(server);
+    registerExecuteStep(server);
+    registerReviewCheckpoint(server);
+    registerResumeBuild(server);
+    registerRollbackStep(server);
+  }
 
-  // Revenue
-  registerTrackRevenue(server);
-  registerBuildFromDescription(server);
+  if (on("project-management")) {
+    registerAddToBacklog(server);
+    registerGetBacklog(server);
+    registerArchiveProject(server);
+  }
 
-  // Business
-  registerGenerateInvoice(server);
-  registerFinancialReport(server);
-  registerTrackExpense(server);
-  registerClientOverview(server);
+  if (on("revenue")) {
+    registerTrackRevenue(server);
+    registerBuildFromDescription(server);
+  }
 
-  // Workflow
-  registerCaptureWorkflow(server);
-  registerListWorkflow(server);
-  registerExportWorkflow(server);
+  if (on("business")) {
+    registerGenerateInvoice(server);
+    registerFinancialReport(server);
+    registerTrackExpense(server);
+    registerClientOverview(server);
+  }
+
+  if (on("workflow")) {
+    registerCaptureWorkflow(server);
+    registerListWorkflow(server);
+    registerExportWorkflow(server);
+  }
 }

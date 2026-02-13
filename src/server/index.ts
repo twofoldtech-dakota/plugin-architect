@@ -5,14 +5,17 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { getDb } from "./storage/index.js";
 import { registerAllTools } from "./tools/index.js";
 import { registerUiResources } from "./ui-resources.js";
+import { loadConfig } from "./config.js";
 
 export function createServer(): McpServer {
+  const config = loadConfig();
+
   const server = new McpServer({
     name: "hive",
     version: "1.0.0",
   });
 
-  registerAllTools(server);
+  registerAllTools(server, config);
   registerUiResources(server);
 
   return server;
