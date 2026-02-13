@@ -24,7 +24,7 @@ export function registerLogDecision(server: McpServer): void {
       }
 
       const entry = decisionsRepo.create(proj.id, {
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toISOString(),
         component,
         decision,
         reasoning,

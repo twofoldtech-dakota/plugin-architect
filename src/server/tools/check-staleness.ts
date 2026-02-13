@@ -37,6 +37,7 @@ export function registerCheckStaleness(server: McpServer): void {
       max_age_days: z.number().optional().describe("Days before considered stale (default 90)"),
       skip_npm: z.boolean().optional().describe("Skip npm registry check"),
     },
+    { readOnlyHint: true },
     async ({ name, max_age_days, skip_npm }) => {
       const threshold = max_age_days ?? 90;
       const checkNpm = !skip_npm;
@@ -55,7 +56,7 @@ export function registerCheckStaleness(server: McpServer): void {
 
       for (const dep of deps) {
         const row = db.prepare("SELECT fetched FROM dependencies WHERE name = ?").get(dep.name) as { fetched: string } | undefined;
-        const fetched = row?.fetched ?? new Date().toISOString().split("T")[0];
+        const fetched = row?.fetched ?? new Date().toISOString();
         const age = daysSince(fetched);
         let latestVersion: string | null = null;
         let updateAvailable: boolean | null = null;

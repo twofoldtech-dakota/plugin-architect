@@ -62,6 +62,7 @@ export function registerValidateCode(server: McpServer): void {
       file_path: z.string().describe("The file path (for context in error messages)"),
       project: z.string().describe("Project slug (to check against project stack)"),
     },
+    { readOnlyHint: true },
     async ({ code, file_path, project }) => {
       const issues: Issue[] = [];
 

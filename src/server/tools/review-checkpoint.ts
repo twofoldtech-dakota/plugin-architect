@@ -11,6 +11,7 @@ export function registerReviewCheckpoint(server: McpServer): void {
       action: z.enum(["review", "approve", "reject"]).describe("'review' to see status, 'approve' to continue, 'reject' to pause the build"),
       reason: z.string().optional().describe("Reason for rejection (if rejecting)"),
     },
+    { readOnlyHint: true },
     async ({ project, action, reason }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {

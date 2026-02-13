@@ -18,13 +18,20 @@ export function registerRegisterAntipattern(server: McpServer): void {
     },
     async ({ name, description, context, why_bad, instead, tags, severity, learned_from }) => {
       const slug = slugify(name);
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
-      antipatternsRepo.create({ name, slug, description, context, why_bad, instead, tags, severity, learned_from, created: now });
+      try {
+        antipatternsRepo.create({ name, slug, description, context, why_bad, instead, tags, severity, learned_from, created: now });
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ message: `Anti-pattern "${name}" registered`, slug, severity, tags }, null, 2) }],
-      };
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ message: `Anti-pattern "${name}" registered`, slug, severity, tags }, null, 2) }],
+        };
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+          return { content: [{ type: "text" as const, text: `An anti-pattern with slug "${slug}" already exists.` }], isError: true };
+        }
+        throw err;
+      }
     },
   );
 }

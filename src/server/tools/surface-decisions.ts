@@ -16,6 +16,7 @@ export function registerSurfaceDecisions(server: McpServer): void {
       project: z.string().optional().describe("Exclude this project from results"),
       include_current: z.boolean().optional().describe("Include decisions from the current project too"),
     },
+    { readOnlyHint: true },
     async ({ component, project, include_current }) => {
       const componentTerms = normalizeComponent(component);
       const allDecisions = decisionsRepo.listAll();

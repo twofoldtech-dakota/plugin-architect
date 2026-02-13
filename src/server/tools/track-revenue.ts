@@ -73,7 +73,7 @@ export function registerTrackRevenue(server: McpServer): void {
 
         const newEntry = businessRepo.addRevenue({
           project,
-          date: entry.date ?? new Date().toISOString().split("T")[0],
+          date: entry.date ?? new Date().toISOString(),
           amount: entry.amount,
           customers: entry.customers,
           source: entry.source,
@@ -96,7 +96,7 @@ export function registerTrackRevenue(server: McpServer): void {
         const months = parseInt(period.replace("m", ""), 10);
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - months);
-        since = cutoff.toISOString().split("T")[0];
+        since = cutoff.toISOString();
       }
 
       const entries = businessRepo.listRevenue(project, since);

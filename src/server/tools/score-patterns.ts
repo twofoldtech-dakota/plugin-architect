@@ -25,6 +25,7 @@ export function registerScorePatterns(server: McpServer): void {
       tags: z.array(z.string()).optional().describe("Filter by tags"),
       min_confidence: z.enum(["high", "medium", "low"]).optional().describe("Minimum confidence"),
     },
+    { readOnlyHint: true },
     async ({ stack, tags, min_confidence }) => {
       const allPatterns = patternsRepo.list();
       if (allPatterns.length === 0) return { content: [{ type: "text" as const, text: "No patterns registered yet." }] };

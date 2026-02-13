@@ -14,6 +14,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 interface SessionEntry {
   transport: StreamableHTTPServerTransport;
   server: McpServer;
+  lastActivity: number;
 }
 
 /**
@@ -43,6 +44,7 @@ export async function startHttpServer(
         return;
       }
       const entry = sessions.get(sessionId)!;
+      entry.lastActivity = Date.now();
       await entry.transport.handleRequest(req, res);
       if (req.method === "DELETE") {
         sessions.delete(sessionId);
@@ -54,6 +56,7 @@ export async function startHttpServer(
     if (req.method === "POST") {
       if (sessionId && sessions.has(sessionId)) {
         const entry = sessions.get(sessionId)!;
+        entry.lastActivity = Date.now();
         await entry.transport.handleRequest(req, res, req.body);
         return;
       }
@@ -63,7 +66,7 @@ export async function startHttpServer(
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: true,
         onsessioninitialized: (id) => {
-          sessions.set(id, { transport, server });
+          sessions.set(id, { transport, server, lastActivity: Date.now() });
         },
       });
 
@@ -83,10 +86,28 @@ export async function startHttpServer(
 
   // Health check
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", sessions: sessions.size });
+    let oldestAge = 0;
+    const now = Date.now();
+    for (const entry of sessions.values()) {
+      const age = now - entry.lastActivity;
+      if (age > oldestAge) oldestAge = age;
+    }
+    res.json({ status: "ok", sessions: sessions.size, max_idle_ms: oldestAge });
   });
 
   app.listen(port, () => {
     console.error(`Hive MCP server listening on http://localhost:${port}/mcp`);
+
+    // Clean up idle sessions every 5 minutes
+    const SESSION_TTL = 30 * 60 * 1000; // 30 minutes
+    setInterval(() => {
+      const now = Date.now();
+      for (const [id, entry] of sessions) {
+        if (now - entry.lastActivity > SESSION_TTL) {
+          sessions.delete(id);
+          entry.transport.close?.();
+        }
+      }
+    }, 5 * 60 * 1000);
   });
 }

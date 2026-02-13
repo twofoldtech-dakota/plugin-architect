@@ -158,7 +158,7 @@ export const ideasRepo = {
   createEvaluation(ideaId: string, evaluation: Omit<Evaluation, "id" | "idea_id" | "created">): Evaluation {
     const db = getDb();
     const id = randomUUID();
-    const created = new Date().toISOString().split("T")[0];
+    const created = new Date().toISOString();
     db.prepare(`
       INSERT INTO idea_evaluations (id, idea_id, feasibility_score, feasibility_has_patterns, feasibility_known_stack, feasibility_estimated_sessions, feasibility_unknowns, competitive_exists, competitive_differentiator, competitive_references, scope_mvp_definition, scope_mvp_components, scope_deferred, scope_full_vision, verdict, reasoning, created)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -187,5 +187,22 @@ export const ideasRepo = {
     const db = getDb();
     const row = db.prepare("SELECT * FROM idea_evaluations WHERE idea_id = ? ORDER BY created DESC LIMIT 1").get(ideaId) as EvaluationRow | undefined;
     return row ? rowToEvaluation(row) : undefined;
+  },
+
+  getEvaluationsByIdeaIds(ideaIds: string[]): Map<string, Evaluation> {
+    if (ideaIds.length === 0) return new Map();
+    const db = getDb();
+    const placeholders = ideaIds.map(() => "?").join(",");
+    const rows = db.prepare(
+      `SELECT * FROM idea_evaluations WHERE idea_id IN (${placeholders}) ORDER BY created DESC`,
+    ).all(...ideaIds) as EvaluationRow[];
+
+    const map = new Map<string, Evaluation>();
+    for (const row of rows) {
+      if (!map.has(row.idea_id)) {
+        map.set(row.idea_id, rowToEvaluation(row));
+      }
+    }
+    return map;
   },
 };

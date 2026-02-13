@@ -12,6 +12,7 @@ export function registerGetBacklog(server: McpServer): void {
       priority: z.enum(["critical", "high", "medium", "low"]).optional().describe("Filter by priority"),
       status: z.enum(["open", "in_progress", "done", "wont_fix"]).optional().default("open").describe("Filter by status (default: open)"),
     },
+    { readOnlyHint: true },
     async ({ project, type, priority, status }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {

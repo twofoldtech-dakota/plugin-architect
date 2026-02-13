@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { join } from "node:path";
 import { projectsRepo, patternsRepo } from "../storage/index.js";
@@ -16,13 +17,17 @@ function determineTargetPath(fileName: string, _architecture: Architecture): str
 }
 
 export function registerAddFeature(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_add_feature",
-    "Add a feature to an existing project by matching patterns from the knowledge base.",
     {
-      project: z.string().describe("Project slug"),
-      feature: z.string().describe("Feature description"),
-      project_path: z.string().describe("Absolute path to the project codebase"),
+      description: "Add a feature to an existing project by matching patterns from the knowledge base.",
+      _meta: { ui: { resourceUri: "ui://hive/scaffold-preview" } },
+      inputSchema: {
+        project: z.string().describe("Project slug"),
+        feature: z.string().describe("Feature description"),
+        project_path: z.string().describe("Absolute path to the project codebase"),
+      },
     },
     async ({ project, feature, project_path }) => {
       const proj = projectsRepo.getBySlug(project);

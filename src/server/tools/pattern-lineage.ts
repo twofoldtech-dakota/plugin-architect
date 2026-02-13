@@ -7,6 +7,7 @@ export function registerPatternLineage(server: McpServer): void {
     "hive_pattern_lineage",
     "Track the version history and cross-project usage of a pattern.",
     { pattern: z.string().describe("Pattern slug") },
+    { readOnlyHint: true },
     async ({ pattern: slug }) => {
       const patternData = patternsRepo.getBySlug(slug);
       if (!patternData) return { content: [{ type: "text" as const, text: `Pattern "${slug}" not found.` }], isError: true };

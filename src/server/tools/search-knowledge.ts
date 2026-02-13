@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import { patternsRepo, dependenciesRepo, decisionsRepo, projectsRepo } from "../storage/index.js";
+import { patternsRepo, dependenciesRepo, decisionsRepo, projectsRepo, workflowRepo } from "../storage/index.js";
 
 interface SearchResult {
-  type: "pattern" | "dependency" | "decision" | "architecture";
+  type: "pattern" | "dependency" | "decision" | "architecture" | "workflow";
   name: string;
   relevance: number;
   summary: string;
@@ -28,7 +28,8 @@ export function registerSearchKnowledge(server: McpServer): void {
     server,
     "hive_search_knowledge",
     {
-      description: "Search across all Hive knowledge — patterns, dependencies, decisions, and architectures.",
+      description: "Search across all Hive knowledge — patterns, dependencies, decisions, architectures, and workflow entries.",
+      annotations: { readOnlyHint: true },
       _meta: { ui: { resourceUri: "ui://hive/search-results" } },
       inputSchema: {
         query: z.string().describe("Search query"),
@@ -70,6 +71,12 @@ export function registerSearchKnowledge(server: McpServer): void {
         const compText = arch.components.map((c) => `${c.name} ${c.description}`).join(" ");
         const score = scoreMatch(`${arch.project} ${arch.description} ${stackText} ${compText}`, terms);
         if (score > 0) results.push({ type: "architecture", name: arch.project, relevance: score, summary: `${arch.project} (${arch.status}) — ${arch.description}`, data: arch });
+      }
+
+      // Search workflow entries
+      for (const w of workflowRepo.list()) {
+        const score = scoreMatch(`${w.title} ${w.content} ${w.tags.join(" ")}`, terms);
+        if (score > 0) results.push({ type: "workflow", name: w.title, relevance: score, summary: `${w.type}: ${w.title}`, data: w });
       }
 
       results.sort((a, b) => b.relevance - a.relevance);

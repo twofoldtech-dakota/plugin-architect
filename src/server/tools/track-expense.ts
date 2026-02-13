@@ -18,7 +18,7 @@ export function registerTrackExpense(server: McpServer): void {
     },
     async ({ vendor, amount, category, project, recurring, note }) => {
       const now = new Date();
-      const date = now.toISOString().split("T")[0];
+      const date = now.toISOString();
 
       const entry = businessRepo.addExpense({
         date,

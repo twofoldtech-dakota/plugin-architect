@@ -24,6 +24,7 @@ export function registerGetInsights(server: McpServer): void {
       type: z.string().describe("Type of system (e.g., 'api', 'fullstack', 'cli', 'database', 'auth', 'realtime')"),
       stack: z.array(z.string()).optional().describe("Stack keywords to narrow insights (e.g., ['typescript', 'next'])"),
     },
+    { readOnlyHint: true },
     async ({ type: systemType, stack }) => {
       const typeTerms = systemType
         .toLowerCase()

@@ -51,6 +51,7 @@ export function registerCompareProjects(server: McpServer): void {
       project_a: z.string().describe("First project slug"),
       project_b: z.string().describe("Second project slug"),
     },
+    { readOnlyHint: true },
     async ({ project_a, project_b }) => {
       const projA = projectsRepo.getBySlug(project_a);
       const projB = projectsRepo.getBySlug(project_b);

@@ -26,6 +26,7 @@ export function registerSuggestPatterns(server: McpServer): void {
       project: z.string().optional().describe("Project slug"),
       stack: z.array(z.string()).optional().describe("Stack keywords to match against"),
     },
+    { readOnlyHint: true },
     async ({ project, stack }) => {
       let stackTerms: string[] = stack ?? [];
 

@@ -13,6 +13,7 @@ export function registerClientOverview(server: McpServer): void {
         .default("all")
         .describe("Filter by client status"),
     },
+    { readOnlyHint: true },
     async ({ status }) => {
       const allClients = businessRepo.listClients();
 
@@ -31,7 +32,7 @@ export function registerClientOverview(server: McpServer): void {
       }
 
       const allInvoices = businessRepo.listInvoices();
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString();
 
       const clients: Array<{
         slug: string;

@@ -15,7 +15,7 @@ export function registerBuildFromDescription(server: McpServer): void {
         .describe("If true, proceed through all steps without pausing for approval (default: false)"),
     },
     async ({ description, auto_approve }) => {
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
       const slug = slugify(description.slice(0, 60));
 
       // Step 1: Capture idea

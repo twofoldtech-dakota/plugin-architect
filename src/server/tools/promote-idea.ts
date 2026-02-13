@@ -44,7 +44,7 @@ export function registerPromoteIdea(server: McpServer): void {
       }
 
       const projectSlug = slug;
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
       const architecture = {
         project: ideaData.name,

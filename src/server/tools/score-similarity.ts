@@ -19,6 +19,7 @@ export function registerScoreSimilarity(server: McpServer): void {
       stack: z.array(z.string()).optional().describe("Stack keywords"),
       idea: z.string().optional().describe("Idea slug to compare"),
     },
+    { readOnlyHint: true },
     async ({ description, stack, idea }) => {
       let queryTerms = extractTerms(description);
       const stackTerms = (stack ?? []).map((s) => s.toLowerCase());

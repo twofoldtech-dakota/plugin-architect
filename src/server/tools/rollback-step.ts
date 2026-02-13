@@ -13,6 +13,7 @@ export function registerRollbackStep(server: McpServer): void {
       task_id: z.string().optional().describe("Specific task ID to rollback. If omitted, rolls back the most recently completed/failed task."),
       project_path: z.string().optional().describe("Absolute path to the project codebase (needed to delete created files)"),
     },
+    { destructiveHint: true },
     async ({ project, task_id, project_path }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {
@@ -66,9 +67,10 @@ export function registerRollbackStep(server: McpServer): void {
       }
 
       // Reset task status
-      target.status = "rolled_back";
+      target.status = "pending";
       target.file_changes = [];
       target.completed = undefined;
+      target.started = undefined;
       target.error = undefined;
 
       // Reset dependent tasks
@@ -103,7 +105,7 @@ export function registerRollbackStep(server: McpServer): void {
             message: `Task "${target.id}" (${target.name}) rolled back.`,
             reverted_files: reverted,
             revert_errors: revertErrors.length > 0 ? revertErrors : undefined,
-            instructions: "The task is now in 'rolled_back' status. Run hive_execute_step to retry it or adjust the approach.",
+            instructions: "The task is now reset to 'pending'. Run hive_execute_step to retry it or adjust the approach.",
           }, null, 2),
         }],
       };

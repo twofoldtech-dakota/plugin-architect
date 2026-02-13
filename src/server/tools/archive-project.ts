@@ -10,6 +10,7 @@ export function registerArchiveProject(server: McpServer): void {
       project: z.string().describe("Project slug"),
       reason: z.string().optional().describe("Reason for archiving"),
     },
+    { destructiveHint: true },
     async ({ project, reason }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {
@@ -27,7 +28,7 @@ export function registerArchiveProject(server: McpServer): void {
 
       // Log archival decision
       decisionsRepo.create(proj.id, {
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toISOString(),
         component: "project",
         decision: "Archive project",
         reasoning: reason ?? "Project archived by user",

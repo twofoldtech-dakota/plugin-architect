@@ -51,7 +51,7 @@ export const projectsRepo = {
   create(data: { slug: string; name: string; description: string; status?: string; architecture?: Architecture }): Project {
     const db = getDb();
     const id = randomUUID();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     const status = data.status ?? "planning";
     const arch: Architecture = data.architecture ?? {
       project: data.name,
@@ -91,7 +91,7 @@ export const projectsRepo = {
 
   updateArchitecture(slug: string, architecture: Architecture): Project | undefined {
     const db = getDb();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     architecture.updated = now;
     const result = db.prepare(`
       UPDATE projects SET architecture = ?, status = ?, updated = ? WHERE slug = ?
@@ -102,7 +102,7 @@ export const projectsRepo = {
 
   updateStatus(slug: string, status: string): Project | undefined {
     const db = getDb();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     const result = db.prepare("UPDATE projects SET status = ?, updated = ? WHERE slug = ?").run(status, now, slug);
     if (result.changes === 0) return undefined;
     return this.getBySlug(slug);

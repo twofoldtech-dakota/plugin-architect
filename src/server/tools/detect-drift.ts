@@ -33,6 +33,7 @@ export function registerDetectDrift(server: McpServer): void {
       project: z.string().describe("Project slug"),
       project_path: z.string().describe("Absolute path to the project codebase"),
     },
+    { readOnlyHint: true },
     async ({ project, project_path }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) return { content: [{ type: "text" as const, text: `Project "${project}" not found.` }], isError: true };

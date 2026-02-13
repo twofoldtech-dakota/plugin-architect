@@ -37,7 +37,7 @@ export function registerSnapshotPatterns(server: McpServer): void {
       }
 
       const slug = slugify(name);
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
       patternsRepo.upsert({
         name,

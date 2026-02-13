@@ -36,7 +36,6 @@ export function registerExecuteStep(server: McpServer): void {
         )
         .optional()
         .describe("Files that were created, modified, or deleted during execution"),
-      project_path: z.string().optional().describe("Absolute path to the project codebase (needed to snapshot file contents for rollback)"),
     },
     async ({ project, task_id, outcome, error, files_changed }) => {
       const proj = projectsRepo.getBySlug(project);
@@ -58,7 +57,7 @@ export function registerExecuteStep(server: McpServer): void {
         }
 
         task.status = outcome;
-        task.completed = new Date().toISOString().split("T")[0];
+        task.completed = new Date().toISOString();
         if (error) task.error = error;
 
         if (files_changed) {
@@ -120,7 +119,7 @@ export function registerExecuteStep(server: McpServer): void {
 
       // Mark task as in_progress
       next.task.status = "in_progress";
-      next.task.started = new Date().toISOString().split("T")[0];
+      next.task.started = new Date().toISOString();
       buildRepo.updatePlan(plan.id, { status: "in_progress", current_phase: next.phaseIdx, phases: plan.phases });
 
       const component = proj.architecture.components.find((c) => c.name === next.task.component);

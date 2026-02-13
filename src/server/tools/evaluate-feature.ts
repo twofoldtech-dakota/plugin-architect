@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { projectsRepo, patternsRepo } from "../storage/index.js";
 import type { Architecture } from "../types/architecture.js";
@@ -64,13 +65,18 @@ function deriveVerdict(alignment: Alignment, effort: "low" | "medium" | "high", 
 }
 
 export function registerEvaluateFeature(server: McpServer): void {
-  server.tool(
+  registerAppTool(
+    server,
     "hive_evaluate_feature",
-    "Evaluate whether a proposed feature is worth building.",
     {
-      project: z.string().describe("Project slug"),
-      feature: z.string().describe("Feature description"),
-      reasoning: z.string().optional().describe("Why you think this feature is needed"),
+      description: "Evaluate whether a proposed feature is worth building.",
+      annotations: { readOnlyHint: true },
+      _meta: { ui: { resourceUri: "ui://hive/feature-evaluator" } },
+      inputSchema: {
+        project: z.string().describe("Project slug"),
+        feature: z.string().describe("Feature description"),
+        reasoning: z.string().optional().describe("Why you think this feature is needed"),
+      },
     },
     async ({ project, feature, reasoning }) => {
       const proj = projectsRepo.getBySlug(project);

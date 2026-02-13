@@ -10,6 +10,7 @@ export function registerResumeBuild(server: McpServer): void {
     {
       project: z.string().describe("Project slug"),
     },
+    { readOnlyHint: true },
     async ({ project }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {

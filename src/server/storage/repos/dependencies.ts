@@ -30,7 +30,7 @@ export const dependenciesRepo = {
   upsert(dep: DependencySurface): DependencySurface & { id: string } {
     const db = getDb();
     const existing = db.prepare("SELECT id FROM dependencies WHERE name = ?").get(dep.name) as { id: string } | undefined;
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
 
     if (existing) {
       db.prepare(`

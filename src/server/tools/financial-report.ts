@@ -12,17 +12,17 @@ function getDateRange(period: string, start?: string, end?: string): { from: str
       const qMonth = Math.floor(now.getMonth() / 3) * 3;
       return {
         from: `${now.getFullYear()}-${String(qMonth + 1).padStart(2, "0")}-01`,
-        to: now.toISOString().split("T")[0],
+        to: now.toISOString(),
       };
     }
     case "this_year":
-      return { from: `${now.getFullYear()}-01-01`, to: now.toISOString().split("T")[0] };
+      return { from: `${now.getFullYear()}-01-01`, to: now.toISOString() };
     case "last_year":
       return { from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` };
     case "custom":
-      return { from: start ?? "1970-01-01", to: end ?? now.toISOString().split("T")[0] };
+      return { from: start ?? "1970-01-01", to: end ?? now.toISOString() };
     default:
-      return { from: `${now.getFullYear()}-01-01`, to: now.toISOString().split("T")[0] };
+      return { from: `${now.getFullYear()}-01-01`, to: now.toISOString() };
   }
 }
 
@@ -44,6 +44,7 @@ export function registerFinancialReport(server: McpServer): void {
         .default("summary")
         .describe("Report format"),
     },
+    { readOnlyHint: true },
     async ({ period, start, end, format }) => {
       const range = getDateRange(period, start, end);
 
@@ -110,7 +111,7 @@ export function registerFinancialReport(server: McpServer): void {
       const overdueInvoices: { id: string; client: string; amount: number; due_date?: string }[] = [];
 
       const allInvoices = businessRepo.listInvoices();
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString();
       for (const inv of allInvoices) {
         if (inv.status === "sent" || inv.status === "overdue") {
           unpaidCount++;

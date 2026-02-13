@@ -44,7 +44,7 @@ export function registerEvaluateIdea(server: McpServer): void {
       }
 
       ideasRepo.createEvaluation(ideaData.id!, { feasibility, competitive, scope, verdict, reasoning });
-      ideasRepo.update(slug, { status: "evaluated", updated: new Date().toISOString().split("T")[0] });
+      ideasRepo.update(slug, { status: "evaluated", updated: new Date().toISOString() });
 
       return {
         content: [

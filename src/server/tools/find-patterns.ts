@@ -9,6 +9,7 @@ export function registerFindPatterns(server: McpServer): void {
     "hive_find_patterns",
     {
       description: "Search for relevant patterns by query (tags or keywords) and optional stack filter",
+      annotations: { readOnlyHint: true },
       _meta: { ui: { resourceUri: "ui://hive/pattern-gallery" } },
       inputSchema: {
         query: z.string().describe("Natural language query or tags to search for"),

@@ -9,6 +9,7 @@ export function registerListIdeas(server: McpServer): void {
     "hive_list_ideas",
     {
       description: "List all captured ideas with their status and verdict",
+      annotations: { readOnlyHint: true },
       _meta: { ui: { resourceUri: "ui://hive/idea-kanban" } },
       inputSchema: {
         status: z
@@ -26,8 +27,11 @@ export function registerListIdeas(server: McpServer): void {
         };
       }
 
+      const ideaIds = ideas.map((i) => i.id!);
+      const evaluations = ideasRepo.getEvaluationsByIdeaIds(ideaIds);
+
       const summaries = ideas.map((idea) => {
-        const evaluation = ideasRepo.getEvaluation(idea.id!);
+        const evaluation = evaluations.get(idea.id!);
         return {
           name: idea.name,
           slug: idea.slug,

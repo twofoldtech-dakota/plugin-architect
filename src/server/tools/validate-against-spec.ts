@@ -11,6 +11,7 @@ export function registerValidateAgainstSpec(server: McpServer): void {
       action: z.string().describe("What you are about to do (natural language description)"),
       files: z.array(z.string()).optional().describe("File paths that will be created or modified"),
     },
+    { readOnlyHint: true },
     async ({ project, action, files }) => {
       const proj = projectsRepo.getBySlug(project);
       if (!proj) {

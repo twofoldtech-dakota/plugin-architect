@@ -6,6 +6,7 @@ export function registerListPatterns(server: McpServer): void {
     "hive_list_patterns",
     "List all registered patterns with their tags",
     {},
+    { readOnlyHint: true },
     async () => {
       const patterns = patternsRepo.list();
 

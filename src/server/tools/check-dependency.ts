@@ -9,6 +9,7 @@ export function registerCheckDependency(server: McpServer): void {
     {
       name: z.string().describe("Package name (e.g., 'drizzle-orm')"),
     },
+    { readOnlyHint: true },
     async ({ name }) => {
       const dep = dependenciesRepo.getByName(name);
       if (!dep) {

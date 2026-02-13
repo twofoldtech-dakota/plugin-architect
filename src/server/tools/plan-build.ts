@@ -100,7 +100,7 @@ export function registerPlanBuild(server: McpServer): void {
       }
 
       const phases = derivePhases(architecture);
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
       const plan = buildRepo.createPlan(proj.id, {
         description,

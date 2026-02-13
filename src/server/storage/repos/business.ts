@@ -140,7 +140,7 @@ export const businessRepo = {
   addBacklogItem(projectId: string, item: Omit<BacklogItem, "id" | "project_id" | "created">): BacklogItem {
     const db = getDb();
     const id = randomUUID();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     db.prepare(`
       INSERT INTO backlog_items (id, project_id, type, title, description, priority, status, source, created)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -222,7 +222,7 @@ export const businessRepo = {
 
   updateClient(slug: string, updates: Partial<ClientProfile>): void {
     const db = getDb();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     const fields: string[] = ["updated = ?"];
     const values: unknown[] = [now];
 
@@ -239,7 +239,7 @@ export const businessRepo = {
   createInvoice(clientId: string, invoice: Omit<Invoice, "id" | "created">): Invoice & { id: string; client_id: string } {
     const db = getDb();
     const id = randomUUID();
-    const now = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
     db.prepare(`
       INSERT INTO invoices (id, client_id, project, date, due_date, line_items, subtotal, tax, tax_rate, total, status, payment_link, notes, created, updated)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

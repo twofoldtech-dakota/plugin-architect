@@ -6,6 +6,7 @@ export function registerListProjects(server: McpServer): void {
     "hive_list_projects",
     "List all tracked projects with their status and stack",
     {},
+    { readOnlyHint: true },
     async () => {
       const projects = projectsRepo.list();
 

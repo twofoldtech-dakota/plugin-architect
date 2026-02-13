@@ -20,6 +20,9 @@ const VIEWS = [
   "architecture-viewer",
   "pattern-gallery",
   "search-results",
+  "feature-evaluator",
+  "progress-dashboard",
+  "scaffold-preview",
 ] as const;
 
 export type ViewName = (typeof VIEWS)[number];

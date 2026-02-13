@@ -18,6 +18,7 @@ export function registerDecisionGraph(server: McpServer): void {
       topic: z.string().describe("Component or topic to map decisions for"),
       include_related: z.boolean().optional().describe("Include loosely related decisions (default true)"),
     },
+    { readOnlyHint: true },
     async ({ topic, include_related }) => {
       const includeRelated = include_related !== false;
       const topicTerms = normalizeTerms(topic);

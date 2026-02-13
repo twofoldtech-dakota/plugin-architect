@@ -18,30 +18,37 @@ export function registerCaptureIdea(server: McpServer): void {
     async ({ description, name, problem, audience, proposed_solution, assumptions, open_questions }) => {
       const shortName = name ?? description.split(/\s+/).slice(0, 8).join(" ");
       const slug = slugify(shortName);
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
-      const idea = ideasRepo.create({
-        name: shortName,
-        slug,
-        description,
-        problem: problem ?? "",
-        audience: audience ?? "",
-        proposed_solution: proposed_solution ?? "",
-        assumptions: assumptions ?? [],
-        open_questions: open_questions ?? [],
-        status: "raw",
-        created: now,
-        updated: now,
-      });
+      try {
+        const idea = ideasRepo.create({
+          name: shortName,
+          slug,
+          description,
+          problem: problem ?? "",
+          audience: audience ?? "",
+          proposed_solution: proposed_solution ?? "",
+          assumptions: assumptions ?? [],
+          open_questions: open_questions ?? [],
+          status: "raw",
+          created: now,
+          updated: now,
+        });
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(idea, null, 2),
-          },
-        ],
-      };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(idea, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+          return { content: [{ type: "text" as const, text: `An idea with slug "${slug}" already exists.` }], isError: true };
+        }
+        throw err;
+      }
     },
   );
 }

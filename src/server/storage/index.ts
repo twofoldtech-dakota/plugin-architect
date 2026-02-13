@@ -9,3 +9,4 @@ export { dependenciesRepo } from "./repos/dependencies.js";
 export { antipatternsRepo } from "./repos/antipatterns.js";
 export { buildRepo } from "./repos/build.js";
 export { businessRepo } from "./repos/business.js";
+export { workflowRepo } from "./repos/workflow.js";

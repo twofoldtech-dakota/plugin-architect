@@ -66,6 +66,11 @@ import { registerFinancialReport } from "./financial-report.js";
 import { registerTrackExpense } from "./track-expense.js";
 import { registerClientOverview } from "./client-overview.js";
 
+// Workflow
+import { registerCaptureWorkflow } from "./capture-workflow.js";
+import { registerListWorkflow } from "./list-workflow.js";
+import { registerExportWorkflow } from "./export-workflow.js";
+
 /** Register all Hive tools on the MCP server. */
 export function registerAllTools(server: McpServer): void {
   // Discovery
@@ -133,4 +138,9 @@ export function registerAllTools(server: McpServer): void {
   registerFinancialReport(server);
   registerTrackExpense(server);
   registerClientOverview(server);
+
+  // Workflow
+  registerCaptureWorkflow(server);
+  registerListWorkflow(server);
+  registerExportWorkflow(server);
 }

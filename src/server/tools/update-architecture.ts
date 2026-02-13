@@ -44,13 +44,13 @@ export function registerUpdateArchitecture(server: McpServer): void {
         updates,
       ) as unknown as Architecture;
 
-      merged.updated = new Date().toISOString().split("T")[0];
+      merged.updated = new Date().toISOString();
 
       projectsRepo.updateArchitecture(project, merged);
 
       if (reason) {
         decisionsRepo.create(proj.id, {
-          date: new Date().toISOString().split("T")[0],
+          date: new Date().toISOString(),
           component: "architecture",
           decision: reason,
           reasoning: "Auto-logged from architecture update",

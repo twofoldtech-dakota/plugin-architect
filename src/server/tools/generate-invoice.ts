@@ -81,7 +81,7 @@ export function registerGenerateInvoice(server: McpServer): void {
       const tax = Math.round(subtotal * taxRate * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
 
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
       // Calculate due date from terms
       let dueDate: string | undefined;
@@ -92,7 +92,7 @@ export function registerGenerateInvoice(server: McpServer): void {
           const days = parseInt(netMatch[1], 10);
           const due = new Date();
           due.setDate(due.getDate() + days);
-          dueDate = due.toISOString().split("T")[0];
+          dueDate = due.toISOString();
         }
       }
 

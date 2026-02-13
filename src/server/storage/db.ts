@@ -127,22 +127,6 @@ CREATE TABLE IF NOT EXISTS build_plans (
   updated TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS build_tasks (
-  id TEXT PRIMARY KEY,
-  build_plan_id TEXT NOT NULL REFERENCES build_plans(id) ON DELETE CASCADE,
-  phase_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  depends_on TEXT NOT NULL DEFAULT '[]',
-  status TEXT NOT NULL DEFAULT 'pending',
-  component TEXT,
-  expected_files TEXT NOT NULL DEFAULT '[]',
-  file_changes TEXT NOT NULL DEFAULT '[]',
-  started TEXT,
-  completed TEXT,
-  error TEXT
-);
-
 CREATE TABLE IF NOT EXISTS revenue_entries (
   id TEXT PRIMARY KEY,
   project TEXT NOT NULL,
@@ -206,7 +190,85 @@ CREATE TABLE IF NOT EXISTS invoices (
   created TEXT NOT NULL,
   updated TEXT
 );
+
+CREATE TABLE IF NOT EXISTS workflow_entries (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '[]',
+  project TEXT,
+  mood TEXT,
+  published INTEGER NOT NULL DEFAULT 0,
+  published_at TEXT,
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+
+-- Indexes for foreign key lookups
+CREATE INDEX IF NOT EXISTS idx_decisions_project ON decisions(project_id);
+CREATE INDEX IF NOT EXISTS idx_idea_evaluations_idea ON idea_evaluations(idea_id);
+CREATE INDEX IF NOT EXISTS idx_build_plans_project ON build_plans(project_id);
+CREATE INDEX IF NOT EXISTS idx_backlog_items_project ON backlog_items(project_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+
+-- Workflow indexes
+CREATE INDEX IF NOT EXISTS idx_workflow_type ON workflow_entries(type);
+CREATE INDEX IF NOT EXISTS idx_workflow_created ON workflow_entries(created);
+CREATE INDEX IF NOT EXISTS idx_workflow_project ON workflow_entries(project);
+CREATE INDEX IF NOT EXISTS idx_workflow_published ON workflow_entries(published);
+
+-- Compound indexes for filtered queries
+CREATE INDEX IF NOT EXISTS idx_revenue_project_date ON revenue_entries(project, date);
+CREATE INDEX IF NOT EXISTS idx_expenses_project_date ON expenses(project, date);
+CREATE INDEX IF NOT EXISTS idx_backlog_project_status ON backlog_items(project_id, status);
 `;
+
+interface Migration {
+  version: number;
+  sql: string;
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 2,
+    sql: `DROP TABLE IF EXISTS build_tasks;`,
+  },
+  {
+    version: 3,
+    sql: `
+CREATE TABLE IF NOT EXISTS workflow_entries (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '[]',
+  project TEXT,
+  mood TEXT,
+  published INTEGER NOT NULL DEFAULT 0,
+  published_at TEXT,
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_type ON workflow_entries(type);
+CREATE INDEX IF NOT EXISTS idx_workflow_created ON workflow_entries(created);
+CREATE INDEX IF NOT EXISTS idx_workflow_project ON workflow_entries(project);
+CREATE INDEX IF NOT EXISTS idx_workflow_published ON workflow_entries(published);
+`,
+  },
+];
+
+function runMigrations(db: Database.Database): void {
+  const row = db.prepare("SELECT MAX(version) as v FROM schema_version").get() as { v: number } | undefined;
+  const current = row?.v ?? 0;
+
+  for (const migration of MIGRATIONS) {
+    if (migration.version > current) {
+      db.exec(migration.sql);
+      db.prepare("INSERT INTO schema_version (version) VALUES (?)").run(migration.version);
+    }
+  }
+}
 
 export function getDb(): Database.Database {
   if (_db) return _db;
@@ -227,6 +289,8 @@ export function getDb(): Database.Database {
     _db.exec(SCHEMA_DDL);
     _db.prepare("INSERT INTO schema_version (version) VALUES (?)").run(1);
   }
+
+  runMigrations(_db);
 
   return _db;
 }

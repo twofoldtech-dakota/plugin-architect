@@ -13,7 +13,7 @@ export function registerInitProject(server: McpServer): void {
     },
     async ({ name, description, stack }) => {
       const slug = slugify(name);
-      const now = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
       const architecture = {
         project: name,
@@ -27,22 +27,29 @@ export function registerInitProject(server: McpServer): void {
         file_structure: {},
       };
 
-      const project = projectsRepo.create({
-        slug,
-        name,
-        description,
-        status: "planning",
-        architecture,
-      });
+      try {
+        const project = projectsRepo.create({
+          slug,
+          name,
+          description,
+          status: "planning",
+          architecture,
+        });
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(project.architecture, null, 2),
-          },
-        ],
-      };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(project.architecture, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+          return { content: [{ type: "text" as const, text: `A project with slug "${slug}" already exists.` }], isError: true };
+        }
+        throw err;
+      }
     },
   );
 }
