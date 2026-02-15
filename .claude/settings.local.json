@@ -1,32 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "mcp__hive__hive_list_projects",
-      "Bash(wc:*)",
-      "Bash(for f in D:githubhivesrcservertools*.ts)",
-      "Bash(do grep -o '\"\"hive_[^\"\"]*\"\"' \"$f\")",
-      "Bash(done)",
-      "Bash(grep:*)",
-      "Bash(npm run build:ui:*)",
-      "Bash(ls:*)",
-      "Bash(npm install:*)",
-      "Bash(npm run build:server:*)",
-      "Bash(git remote:*)",
-      "Bash(git config:*)",
-      "Bash(git rm:*)",
-      "Bash(npm uninstall build npm run)",
-      "Bash(test:*)",
-      "Bash(for view in idea-scorecard idea-kanban architecture-viewer pattern-gallery search-results)",
-      "Bash(do)",
-      "Bash(if [ -f \"/Users/dakotasmith/Documents/GitHub/hive/dist/ui/views/$view/index.html\" ])",
-      "Bash(then)",
-      "Bash(echo:*)",
-      "Bash(else)",
-      "Bash(fi)",
-      "Bash(printf:*)",
-      "Bash(timeout:*)",
-      "Bash(node:*)",
-      "Bash(npm run build:*)"
+      "WebSearch"
     ]
   }
 }
