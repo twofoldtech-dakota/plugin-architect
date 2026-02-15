@@ -8,8 +8,8 @@
       "name": "plugin-architect",
       "description": "Expert architect for designing and building Claude Code plugins.",
       "source": {
-        "source": "github",
-        "repo": "twofoldtech-dakota/plugin-architect"
+        "source": "url",
+        "url": "https://github.com/twofoldtech-dakota/plugin-architect.git"
       }
     }
   ]
