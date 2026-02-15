@@ -3,5 +3,5 @@
   "description": "Expert architect for designing and building Claude Code plugins. Covers plugins, skills, MCP servers, hooks, agents, LSP, and settings.",
   "version": "1.0.0",
   "author": { "name": "Dakota Smith" },
-  "repository": { "type": "git", "url": "https://github.com/twofoldtech-dakota/plugin-architect" }
+  "repository": "https://github.com/twofoldtech-dakota/plugin-architect"
 }

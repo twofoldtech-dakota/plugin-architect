@@ -84,7 +84,7 @@ my-plugin/
   "version": "1.0.0",
   "author": { "name": "Name", "email": "email" },
   "homepage": "https://github.com/...",
-  "repository": { "type": "git", "url": "..." },
+  "repository": "https://github.com/...",
   "license": "MIT"
 }
 ```
