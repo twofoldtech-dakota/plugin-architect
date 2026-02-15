@@ -341,11 +341,20 @@ analytics-plugin/
 
 ```json
 {
+  "name": "your-org-your-marketplace",
+  "owner": {
+    "name": "your-org",
+    "url": "https://github.com/your-org"
+  },
   "plugins": [
     {
       "name": "analytics",
       "description": "Analytics tools for querying metrics, dashboards, and reports",
-      "source": "."
+      "source": {
+        "type": "git",
+        "url": "https://github.com/your-org/analytics-plugin",
+        "path": "."
+      }
     }
   ]
 }

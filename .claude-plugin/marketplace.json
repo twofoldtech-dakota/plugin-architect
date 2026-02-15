@@ -1,9 +1,18 @@
 {
+  "name": "twofoldtech-dakota-plugin-architect",
+  "owner": {
+    "name": "twofoldtech-dakota",
+    "url": "https://github.com/twofoldtech-dakota"
+  },
   "plugins": [
     {
       "name": "plugin-architect",
       "description": "Expert architect for designing and building Claude Code plugins.",
-      "source": "."
+      "source": {
+        "type": "git",
+        "url": "https://github.com/twofoldtech-dakota/plugin-architect",
+        "path": "."
+      }
     }
   ]
 }
