@@ -4,17 +4,18 @@ A Claude Code plugin that provides expert guidance for designing and building Cl
 
 ## Installation
 
-**From a local clone:**
+**From the marketplace:**
+
+```
+/plugin marketplace add twofoldtech-dakota/plugin-architect
+/plugin install plugin-architect@twofoldtech-dakota-plugin-architect
+```
+
+**Local development:**
 
 ```bash
 git clone https://github.com/twofoldtech-dakota/plugin-architect.git
 claude --plugin-dir ./plugin-architect
-```
-
-**Or point Claude at the directory:**
-
-```bash
-claude --plugin-dir /path/to/plugin-architect
 ```
 
 ## What's included
@@ -31,7 +32,7 @@ This plugin provides a single skill — `/plugin-architect` — that turns Claud
 | File | Purpose |
 |------|---------|
 | `skills/plugin-architect/SKILL.md` | Core skill instructions, extension ecosystem reference, and architecture decision guide |
-| `skills/plugin-architect/examples.md` | Complete plugin examples (skill-only, MCP server, hooks, full-featured, Python) |
+| `skills/plugin-architect/examples.md` | Complete plugin examples (skill-only, MCP server, hooks, full-featured, analytics) |
 | `skills/plugin-architect/integrations.md` | Integration patterns for databases, APIs, auth, hooks, deployment, and observability |
 
 ## Usage

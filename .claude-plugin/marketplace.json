@@ -1,0 +1,9 @@
+{
+  "plugins": [
+    {
+      "name": "plugin-architect",
+      "description": "Expert architect for designing and building Claude Code plugins.",
+      "source": "."
+    }
+  ]
+}

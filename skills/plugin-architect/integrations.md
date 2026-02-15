@@ -4,10 +4,10 @@
 
 | Database | Package | Best for |
 |----------|---------|----------|
-| SQLite | `better-sqlite3` (TS) / `sqlite3` (Py) | Local, zero-config, single-user |
-| PostgreSQL | `pg` (TS) / `asyncpg` (Py) | Production relational |
-| Redis | `ioredis` (TS) / `redis` (Py) | Cache, queues, pub/sub |
-| MongoDB | `mongodb` (TS) / `motor` (Py) | Document storage |
+| SQLite | `better-sqlite3` | Local, zero-config, single-user |
+| PostgreSQL | `pg` | Production relational |
+| Redis | `ioredis` | Cache, queues, pub/sub |
+| MongoDB | `mongodb` | Document storage |
 | Turso/libSQL | `@libsql/client` | Edge SQLite with sync |
 
 ### SQLite Pattern (TypeScript)
@@ -23,26 +23,9 @@ export function createDb(dbPath: string) {
 }
 ```
 
-### SQLite Pattern (Python)
-
-```python
-import sqlite3
-from pathlib import Path
-
-def create_db(db_path: str) -> sqlite3.Connection:
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.row_factory = sqlite3.Row
-    return conn
-```
-
 ---
 
 ## API Client Pattern
-
-### TypeScript
 
 ```typescript
 interface ApiConfig {
@@ -70,25 +53,6 @@ export class ApiClient {
     return response.json() as T;
   }
 }
-```
-
-### Python
-
-```python
-import httpx
-
-class ApiClient:
-    def __init__(self, base_url: str, api_key: str, timeout: float = 30.0):
-        self.client = httpx.AsyncClient(
-            base_url=base_url,
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=timeout,
-        )
-
-    async def request(self, method: str, path: str, **kwargs):
-        response = await self.client.request(method, path, **kwargs)
-        response.raise_for_status()
-        return response.json()
 ```
 
 ---
@@ -225,7 +189,6 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 
 case "$FILE" in
   *.ts|*.tsx|*.js|*.jsx) npx prettier --write "$FILE" 2>/dev/null ;;
-  *.py) python -m black "$FILE" 2>/dev/null ;;
   *.rs) rustfmt "$FILE" 2>/dev/null ;;
 esac
 

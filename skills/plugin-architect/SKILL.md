@@ -2,7 +2,7 @@
 name: plugin-architect
 description: Expert architect for designing and building Claude Code plugins. Covers the full extension ecosystem — plugins, skills, MCP servers, hooks, agents, LSP, CLAUDE.md, and settings. Determines optimal architecture, components, integrations, and implementation approach. Use when planning, designing, or building any Claude Code extension.
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Write, Edit, Bash(npm *), Bash(npx *), Bash(node *), Bash(python *), Bash(uv *), Bash(pip *), Bash(mkdir *), Bash(ls *), Bash(git *), WebSearch, WebFetch
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash(npm *), Bash(npx *), Bash(node *), Bash(mkdir *), Bash(ls *), Bash(git *), WebSearch, WebFetch
 ---
 
 # Claude Plugin Architect
@@ -208,30 +208,9 @@ await server.connect(transport);
 
 **Key deps:** `@modelcontextprotocol/sdk` (^1.12+), `zod` (^3.24+)
 
-### Python MCP Server Pattern (FastMCP)
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("server-name", description="Server instructions for Tool Search")
-
-@mcp.tool()
-async def tool_name(param: str) -> str:
-    """What it does, returns, when to use. Args: param: meaning."""
-    return "result"
-
-@mcp.resource("data://items/{id}")
-async def get_item(id: str) -> str:
-    return f"Item {id}"
-
-mcp.run(transport="stdio")
-```
-
-**Key deps:** `mcp[cli]` (^1.6+), `httpx`, `pydantic`
-
 ### MCP Best Practices
 
-- **stdio servers**: NEVER write to stdout (breaks JSON-RPC). Use `console.error()` / `sys.stderr`.
+- **stdio servers**: NEVER write to stdout (breaks JSON-RPC). Use `console.error()`.
 - **Tool descriptions**: 3 sentences — what it does, what it returns, when to use it.
 - **5-15 tools** per server. More degrades Claude's selection accuracy.
 - **Tool Search**: Activates automatically at >10% context. Write good server `description` for discovery.
@@ -359,26 +338,29 @@ You are a code review specialist. When reviewing code:
 ### Plugin Marketplace
 
 ```bash
-# Install from marketplace
-claude plugin install my-plugin
+# Add a community marketplace (by GitHub owner/repo)
+/plugin marketplace add owner/repo
+
+# Install a plugin from a marketplace
+/plugin install plugin-name@marketplace-name
 
 # Local development
 claude --plugin-dir ./my-plugin
-
-# Add community marketplace
-claude plugins add-marketplace https://github.com/user/marketplace
 ```
 
-### Marketplace Catalog Format
+### Marketplace Catalog Format (`marketplace.json`)
+
+Place a `marketplace.json` in `.claude-plugin/` to register your plugin:
 
 ```json
 {
-  "plugins": [{
-    "name": "my-plugin",
-    "description": "...",
-    "version": "1.0.0",
-    "source": { "type": "git", "url": "https://github.com/user/my-plugin", "path": "." }
-  }]
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "description": "One-line description of what the plugin does",
+      "source": "."
+    }
+  ]
 }
 ```
 

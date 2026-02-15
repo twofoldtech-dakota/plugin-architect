@@ -319,75 +319,102 @@ allowed-tools: Bash(git *), Bash(npm *), Bash(docker *)
 
 ---
 
-## Example 5: Python MCP Server Plugin
+## Example 5: Analytics MCP Server Plugin
 
-### mcp-server/server.py
+### Structure
 
-```python
-from mcp.server.fastmcp import FastMCP
-import httpx
-import os
+```
+analytics-plugin/
+├── .claude-plugin/
+│   ├── plugin.json
+│   └── marketplace.json
+├── .mcp.json
+├── mcp-server/
+│   ├── src/
+│   │   └── index.ts
+│   ├── package.json
+│   └── tsconfig.json
+└── README.md
+```
 
-mcp = FastMCP(
-    "analytics",
-    description="Analytics tools for querying metrics, dashboards, and reports",
-)
+### .claude-plugin/marketplace.json
 
-BASE_URL = os.environ.get("ANALYTICS_URL", "https://analytics.example.com/api")
-API_KEY = os.environ["ANALYTICS_API_KEY"]
+```json
+{
+  "plugins": [
+    {
+      "name": "analytics",
+      "description": "Analytics tools for querying metrics, dashboards, and reports",
+      "source": "."
+    }
+  ]
+}
+```
 
-@mcp.tool()
-async def query_metrics(
-    metric: str,
-    start_date: str,
-    end_date: str,
-    granularity: str = "day",
-) -> str:
-    """Query a metric over a time range. Returns time series data points.
-    Use when the user asks about metrics, stats, or trends.
+### mcp-server/src/index.ts
 
-    Args:
-        metric: Metric name (e.g. 'page_views', 'signups', 'revenue')
-        start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format
-        granularity: Time granularity — 'hour', 'day', 'week', 'month'
-    """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{BASE_URL}/metrics/{metric}",
-            params={"start": start_date, "end": end_date, "granularity": granularity},
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        return response.text
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 
-@mcp.tool()
-async def list_dashboards() -> str:
-    """List all available analytics dashboards. Returns dashboard names and IDs.
-    Use when the user asks what dashboards or reports are available."""
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{BASE_URL}/dashboards",
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            timeout=15.0,
-        )
-        response.raise_for_status()
-        return response.text
+const server = new McpServer({
+  name: "analytics",
+  version: "1.0.0",
+  capabilities: { tools: { listChanged: true } },
+});
 
-@mcp.resource("dashboard://overview")
-async def overview_dashboard() -> str:
-    """The main overview dashboard data."""
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{BASE_URL}/dashboards/overview",
-            headers={"Authorization": f"Bearer {API_KEY}"},
-        )
-        return response.text
+const BASE_URL = process.env.ANALYTICS_URL || "https://analytics.example.com/api";
+const API_KEY = process.env.ANALYTICS_API_KEY;
 
-def main():
-    mcp.run(transport="stdio")
+async function apiCall(path: string, params?: Record<string, string>): Promise<string> {
+  const url = new URL(`${BASE_URL}${path}`);
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.text();
+}
 
-if __name__ == "__main__":
-    main()
+server.registerTool("query-metrics", {
+  description: "Query a metric over a time range. Returns time series data points. Use when the user asks about metrics, stats, or trends.",
+  inputSchema: {
+    metric: z.string().describe("Metric name (e.g. 'page_views', 'signups', 'revenue')"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+    granularity: z.enum(["hour", "day", "week", "month"]).optional().describe("Time granularity"),
+  },
+}, async ({ metric, start_date, end_date, granularity }) => {
+  const data = await apiCall(`/metrics/${metric}`, {
+    start: start_date,
+    end: end_date,
+    granularity: granularity ?? "day",
+  });
+  return { content: [{ type: "text", text: data }] };
+});
+
+server.registerTool("list-dashboards", {
+  description: "List all available analytics dashboards. Returns dashboard names and IDs. Use when the user asks what dashboards or reports are available.",
+  inputSchema: {},
+}, async () => {
+  const data = await apiCall("/dashboards");
+  return { content: [{ type: "text", text: data }] };
+});
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+console.error("Analytics MCP server running");
+```
+
+### Distribution & Installation
+
+```bash
+# Publish to a marketplace repo, then users install with:
+/plugin marketplace add your-org/your-marketplace
+/plugin install analytics@your-org-your-marketplace
+
+# Local development:
+claude --plugin-dir ./analytics-plugin
 ```
