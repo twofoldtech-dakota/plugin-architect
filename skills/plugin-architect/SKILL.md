@@ -356,17 +356,15 @@ Place a `marketplace.json` in `.claude-plugin/` to register your plugin:
 {
   "name": "owner-marketplace-name",
   "owner": {
-    "name": "owner",
-    "url": "https://github.com/owner"
+    "name": "owner"
   },
   "plugins": [
     {
       "name": "my-plugin",
       "description": "One-line description of what the plugin does",
       "source": {
-        "type": "git",
-        "url": "https://github.com/owner/my-plugin",
-        "path": "."
+        "source": "github",
+        "repo": "owner/my-plugin"
       }
     }
   ]
