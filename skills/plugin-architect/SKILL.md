@@ -125,12 +125,7 @@ hooks:                         # hooks scoped to this skill's lifecycle
 
 ### Context Injection (preprocessing)
 
-Execute shell commands before Claude sees the skill. Output replaces the placeholder:
-
-```markdown
-Current branch: !`git branch --show-current`
-Recent commits: !`git log --oneline -5`
-```
+Execute shell commands before Claude sees the skill. The syntax is an exclamation mark immediately followed by a backtick-wrapped command (e.g., exclamation + backtick + "git branch --show-current" + backtick). The output replaces the placeholder at load time. See the Claude Code docs for full context injection examples.
 
 ### Skill Scopes
 

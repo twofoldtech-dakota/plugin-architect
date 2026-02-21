@@ -304,9 +304,10 @@ allowed-tools: Bash(git *), Bash(npm *), Bash(docker *)
 # Deploy to $ARGUMENTS
 
 ## Pre-deploy checks
-1. Verify all tests pass: !`npm test 2>&1 | tail -5`
-2. Current branch: !`git branch --show-current`
-3. Uncommitted changes: !`git status --short`
+(Use context injection to populate these at load time)
+1. Verify all tests pass
+2. Check current branch
+3. Check for uncommitted changes
 
 ## Steps
 1. Run the full test suite

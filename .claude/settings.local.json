@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "mcp__trigger__search_docs",
+      "Bash(python3:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(ssh:*)",
+      "Bash(echo:*)"
     ]
+  },
+  "enabledPlugins": {
+    "plugin-gtm@twofoldtech-dakota-plugin-gtm": true
   }
 }
